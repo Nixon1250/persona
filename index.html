@@ -21,11 +21,11 @@
         <p id="wynik" style="color: #eccc68;">Oczekiwanie...</p>
     </div>
 
-    <!-- Najnowszy, oficjalny sposób ładowania baz danych Firebase (wersja 10) -->
-    <script type="module">
-        import { initializeApp } from "https://gstatic.com";
-        import { getDatabase, ref, set } from "https://gstatic.com";
+    <!-- ZMIANA: Ładujemy Firebase z ://cloudflare.com - to omija blokady CORS na GitHub Pages -->
+    <script src="https://://cloudflare.com/ajax/libs/firebase/10.8.0/firebase-app-compat.min.js"></script>
+    <script src="https://://cloudflare.com/ajax/libs/firebase/10.8.0/firebase-database-compat.min.js"></script>
 
+    <script>
         // Twoja konfiguracja serwera z projektu Guess!!!
         const firebaseConfig = {
             apiKey: "AIzaSyAnwBG2UCc9Bx8xbnfStR17hku_f-6e06Q",
@@ -37,9 +37,9 @@
             appId: "1:743213180905:web:fb741f2efae9cf04c38d78"
         };
         
-        // Inicjalizacja połączenia
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
+        // Inicjalizacja połączenia w wersji kompatybilnej z CDN
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
         // Podpinamy działanie pod przycisk
         document.getElementById('btn').addEventListener('click', () => {
@@ -56,7 +56,7 @@
             wynikElement.style.color = "#eccc68";
 
             // Zapis do bazy danych pod kluczem 'gra/aktualna_persona'
-            set(ref(database, 'gra/aktualna_persona'), tekst)
+            database.ref('gra/aktualna_persona').set(tekst)
             .then(() => {
                 wynikElement.innerText = "✅ Sukces! Słowo '" + tekst + "' jest w bazie!";
                 wynikElement.style.color = "#2ed573";
