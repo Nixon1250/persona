@@ -2,35 +2,39 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Persona – Gra</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Persona</title>
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       background: #0f0f0f;
       color: white;
       margin: 0;
-      padding: 20px;
+      padding: 16px;
       text-align: center;
+      min-height: 100vh;
     }
     .box {
       background: #1a1a1a;
       border-radius: 16px;
-      padding: 25px;
+      padding: 24px;
       max-width: 420px;
-      margin: 30px auto;
+      margin: 20px auto;
       border: 1px solid #333;
     }
-    h1 { color: #2ed573; margin-bottom: 5px; }
-    input, button {
-      width: 90%;
+    h1 { color: #2ed573; margin: 0 0 8px 0; font-size: 28px; }
+    h2 { color: #eccc68; margin: 0 0 16px 0; font-size: 20px; }
+    p { color: #aaa; margin: 8px 0; }
+    input, button, textarea {
+      width: 100%;
       padding: 14px;
-      margin: 10px 0;
+      margin: 8px 0;
       border-radius: 10px;
       border: none;
       font-size: 16px;
     }
-    input {
+    input, textarea {
       background: #121212;
       color: white;
       border: 1px solid #444;
@@ -42,159 +46,270 @@
       font-weight: bold;
       cursor: pointer;
     }
-    button:disabled {
-      background: #555;
-      color: #aaa;
-    }
+    button:disabled { background: #444; color: #888; }
+    button.red { background: #ff4757; color: white; }
     .code {
-      font-size: 42px;
+      font-size: 40px;
       font-weight: bold;
-      letter-spacing: 8px;
+      letter-spacing: 6px;
       color: #eccc68;
-      margin: 20px 0;
-    }
-    .players {
-      text-align: left;
-      margin-top: 20px;
+      margin: 16px 0;
     }
     .player {
       background: #252525;
-      padding: 10px 15px;
+      padding: 10px 14px;
       border-radius: 8px;
       margin: 6px 0;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
     }
-    #status {
-      color: #888;
-      margin-top: 15px;
-      font-size: 14px;
+    .timer {
+      font-size: 56px;
+      font-weight: bold;
+      color: #ff4757;
+      margin: 16px 0;
     }
+    .hint {
+      background: #2f3542;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 20px;
+      color: #eccc68;
+      margin: 10px 0;
+    }
+    .hidden { display: none !important; }
+    #status { color: #888; font-size: 14px; margin-top: 12px; }
   </style>
 </head>
 <body>
 
+  <!-- EKRAN STARTOWY -->
   <div class="box" id="ekranStart">
     <h1>Persona</h1>
-    <p>Gra imprezowa – zgadnij kto to</p>
-
+    <p>Zgadnij kto to – gra imprezowa</p>
     <button onclick="stworzPokoj()">Stwórz pokój (Host)</button>
-    <p style="margin: 15px 0; color:#888">lub</p>
-    <input type="text" id="kodWejsciowy" placeholder="Wpisz kod pokoju" maxlength="5">
+    <p style="margin:16px 0">lub</p>
+    <input type="text" id="kodWejsciowy" placeholder="Kod pokoju" maxlength="5">
     <input type="text" id="nick" placeholder="Twój nick">
-    <button onclick="dolaczDoPokoju()">Dołącz do pokoju</button>
+    <button onclick="dolaczDoPokoju()">Dołącz</button>
     <div id="status"></div>
   </div>
 
-  <div class="box" id="ekranLobby" style="display:none">
+  <!-- LOBBY -->
+  <div class="box hidden" id="ekranLobby">
     <h1>Pokój</h1>
     <div class="code" id="kodPokoju">----</div>
-    <p>Podaj ten kod znajomym</p>
-    <div class="players" id="listaGraczy"></div>
-    <button id="btnStart" onclick="startGry()" style="display:none">Rozpocznij grę</button>
+    <p>Podaj kod znajomym</p>
+    <div id="listaGraczy"></div>
+    <button id="btnStart" class="hidden" onclick="rozpocznijGre()">Rozpocznij grę</button>
     <div id="statusLobby"></div>
   </div>
 
+  <!-- WYBÓR PERSONY -->
+  <div class="box hidden" id="ekranPersona">
+    <h2>Wybierz personę</h2>
+    <p>Wpisz potajemnie kogoś (znaną osobę lub znajomego)</p>
+    <input type="text" id="inputPersona" placeholder="Np. Robert Lewandowski">
+    <button onclick="wyslijPersone()">Gotowe</button>
+    <div id="statusPersona"></div>
+  </div>
+
+  <!-- OCZEKIWANIE NA WSZYSTKICH -->
+  <div class="box hidden" id="ekranCzekaj">
+    <h2>Czekamy na wszystkich...</h2>
+    <div id="listaGotowych"></div>
+  </div>
+
+  <!-- RUNDA – PODPOWIADAJĄCY -->
+  <div class="box hidden" id="ekranPodpowiadajacy">
+    <h2>Twoja tura – dawaj wskazówkę!</h2>
+    <p>Runda <span id="nrRundy1">1</span> / 5</p>
+    <div class="timer" id="timerPodpowiedz">30</div>
+    <input type="text" id="inputWskazowka" placeholder="Jedno słowo">
+    <button onclick="wyslijWskazowke()">Wyślij wskazówkę</button>
+  </div>
+
+  <!-- RUNDA – ZGADUJĄCY -->
+  <div class="box hidden" id="ekranZgadujacy">
+    <h2>Zgaduj!</h2>
+    <p>Runda <span id="nrRundy2">1</span> / 5 • Punkty: <span id="punktyRundy">50</span></p>
+    <div class="timer" id="timerZgadywanie">30</div>
+    <div id="listaWskazowek"></div>
+    <input type="text" id="inputOdpowiedz" placeholder="Kto to jest?">
+    <button onclick="wyslijOdpowiedz()">Wyślij odpowiedź</button>
+    <div id="statusOdpowiedzi"></div>
+  </div>
+
   <script>
-    // ========== TWOJA KONFIGURACJA FIREBASE ==========
-    const DB_URL = "https://guess-27805-default-rtdb.europe-west1.firebasedatabase.app";
-
-    let kodPokoju = "";
+    const DB = "https://guess-27805-default-rtdb.europe-west1.firebasedatabase.app";
+    let kod = "";
     let jestemHostem = false;
+    let mojId = "g_" + Math.random().toString(36).substr(2, 8);
     let mojNick = "";
-    let mojId = "gracz_" + Math.random().toString(36).substr(2, 9);
+    let interwal = null;
 
-    // ========== FUNKCJE ==========
+    // ========== STARTOWE ==========
     function stworzPokoj() {
-      kodPokoju = Math.random().toString(36).substr(2, 5).toUpperCase();
+      kod = Math.random().toString(36).substr(2, 5).toUpperCase();
       jestemHostem = true;
       mojNick = "Host";
 
-      const dane = {
-        host: mojId,
-        gracze: {
-          [mojId]: { nick: "Host", gotowy: true }
-        },
-        status: "lobby"
-      };
-
-      fetch(`${DB_URL}/pokoje/${kodPokoju}.json`, {
+      fetch(`${DB}/pokoje/${kod}.json`, {
         method: "PUT",
-        body: JSON.stringify(dane)
-      })
-      .then(() => {
-        document.getElementById("ekranStart").style.display = "none";
-        document.getElementById("ekranLobby").style.display = "block";
-        document.getElementById("kodPokoju").innerText = kodPokoju;
-        document.getElementById("btnStart").style.display = "block";
-        nasluchujGraczy();
-      })
-      .catch(err => {
-        document.getElementById("status").innerText = "Błąd: " + err.message;
+        body: JSON.stringify({
+          host: mojId,
+          status: "lobby",
+          gracze: { [mojId]: { nick: "Host", gotowy: false, persona: "" } }
+        })
+      }).then(() => {
+        pokaz("ekranLobby");
+        document.getElementById("kodPokoju").innerText = kod;
+        document.getElementById("btnStart").classList.remove("hidden");
+        nasluchuj();
       });
     }
 
     function dolaczDoPokoju() {
-      kodPokoju = document.getElementById("kodWejsciowy").value.trim().toUpperCase();
+      kod = document.getElementById("kodWejsciowy").value.trim().toUpperCase();
       mojNick = document.getElementById("nick").value.trim() || "Gracz";
+      if (kod.length < 4) return alert("Za krótki kod");
 
-      if (!kodPokoju || kodPokoju.length < 4) {
-        document.getElementById("status").innerText = "Wpisz poprawny kod";
-        return;
-      }
-
-      // Sprawdź czy pokój istnieje
-      fetch(`${DB_URL}/pokoje/${kodPokoju}.json`)
+      fetch(`${DB}/pokoje/${kod}.json`)
         .then(r => r.json())
         .then(data => {
-          if (!data) {
-            document.getElementById("status").innerText = "Nie ma takiego pokoju";
-            return;
-          }
-
-          // Dodaj siebie do pokoju
-          return fetch(`${DB_URL}/pokoje/${kodPokoju}/gracze/${mojId}.json`, {
+          if (!data) return alert("Nie ma takiego pokoju");
+          return fetch(`${DB}/pokoje/${kod}/gracze/${mojId}.json`, {
             method: "PUT",
-            body: JSON.stringify({ nick: mojNick, gotowy: true })
+            body: JSON.stringify({ nick: mojNick, gotowy: false, persona: "" })
           });
         })
         .then(() => {
-          document.getElementById("ekranStart").style.display = "none";
-          document.getElementById("ekranLobby").style.display = "block";
-          document.getElementById("kodPokoju").innerText = kodPokoju;
-          nasluchujGraczy();
-        })
-        .catch(err => {
-          document.getElementById("status").innerText = "Błąd: " + err.message;
+          pokaz("ekranLobby");
+          document.getElementById("kodPokoju").innerText = kod;
+          nasluchuj();
         });
     }
 
-    function nasluchujGraczy() {
-      // Co 2 sekundy odświeżamy listę graczy
-      setInterval(() => {
-        fetch(`${DB_URL}/pokoje/${kodPokoju}/gracze.json`)
+    function nasluchuj() {
+      if (interwal) clearInterval(interwal);
+      interwal = setInterval(() => {
+        fetch(`${DB}/pokoje/${kod}.json`)
           .then(r => r.json())
-          .then(gracze => {
-            if (!gracze) return;
+          .then(data => {
+            if (!data) return;
 
-            let html = "";
-            let liczba = 0;
-            for (let id in gracze) {
-              html += `<div class="player">${gracze[id].nick}</div>`;
-              liczba++;
+            // Lista graczy w lobby
+            if (data.status === "lobby") {
+              let html = "";
+              for (let id in data.gracze) {
+                html += `<div class="player">${data.gracze[id].nick}</div>`;
+              }
+              document.getElementById("listaGraczy").innerHTML = html;
             }
-            document.getElementById("listaGraczy").innerHTML = html;
-            document.getElementById("statusLobby").innerText = `Graczy w pokoju: ${liczba}`;
+
+            // Start gry → wybór persony
+            if (data.status === "wybor" && document.getElementById("ekranLobby").style.display !== "none") {
+              pokaz("ekranPersona");
+            }
+
+            // Wszyscy wybrali persony
+            if (data.status === "wybor") {
+              let wszyscy = true;
+              let html = "";
+              for (let id in data.gracze) {
+                const g = data.gracze[id];
+                html += `<div class="player">${g.nick} ${g.persona ? "✅" : "⏳"}</div>`;
+                if (!g.persona) wszyscy = false;
+              }
+              if (document.getElementById("ekranCzekaj").classList.contains("hidden") === false) {
+                document.getElementById("listaGotowych").innerHTML = html;
+              }
+              if (wszyscy && jestemHostem) {
+                // Host automatycznie startuje rundę 1
+                fetch(`${DB}/pokoje/${kod}.json`, {
+                  method: "PATCH",
+                  body: JSON.stringify({
+                    status: "runda",
+                    runda: 1,
+                    wskazowki: [],
+                    aktualnyPodpowiadajacy: Object.keys(data.gracze)[0]
+                  })
+                });
+              }
+            }
+
+            // Runda trwa
+            if (data.status === "runda") {
+              const jestemPodpowiadajacym = data.aktualnyPodpowiadajacy === mojId;
+              if (jestemPodpowiadajacym) {
+                pokaz("ekranPodpowiadajacy");
+                document.getElementById("nrRundy1").innerText = data.runda || 1;
+              } else {
+                pokaz("ekranZgadujacy");
+                document.getElementById("nrRundy2").innerText = data.runda || 1;
+                // Pokaż wskazówki
+                let h = "";
+                (data.wskazowki || []).forEach(w => {
+                  h += `<div class="hint">${w}</div>`;
+                });
+                document.getElementById("listaWskazowek").innerHTML = h;
+              }
+            }
           });
-      }, 2000);
+      }, 1500);
     }
 
-    function startGry() {
+    function rozpocznijGre() {
       if (!jestemHostem) return;
-      fetch(`${DB_URL}/pokoje/${kodPokoju}/status.json`, {
+      fetch(`${DB}/pokoje/${kod}/status.json`, {
         method: "PUT",
-        body: JSON.stringify("gra")
-      }).then(() => {
-        alert("Gra startuje! (następny krok – ekrany rund)");
+        body: JSON.stringify("wybor")
       });
+    }
+
+    function wyslijPersone() {
+      const persona = document.getElementById("inputPersona").value.trim();
+      if (!persona) return alert("Wpisz personę");
+      fetch(`${DB}/pokoje/${kod}/gracze/${mojId}/persona.json`, {
+        method: "PUT",
+        body: JSON.stringify(persona)
+      }).then(() => {
+        pokaz("ekranCzekaj");
+      });
+    }
+
+    function wyslijWskazowke() {
+      const slowo = document.getElementById("inputWskazowka").value.trim();
+      if (!slowo) return;
+      // Dodaj wskazówkę do tablicy
+      fetch(`${DB}/pokoje/${kod}/wskazowki.json`)
+        .then(r => r.json())
+        .then(arr => {
+          arr = arr || [];
+          arr.push(slowo);
+          return fetch(`${DB}/pokoje/${kod}/wskazowki.json`, {
+            method: "PUT",
+            body: JSON.stringify(arr)
+          });
+        })
+        .then(() => {
+          document.getElementById("inputWskazowka").value = "";
+          document.getElementById("inputWskazowka").disabled = true;
+        });
+    }
+
+    function wyslijOdpowiedz() {
+      const odp = document.getElementById("inputOdpowiedz").value.trim();
+      if (!odp) return;
+      document.getElementById("statusOdpowiedzi").innerText = "Wysłano: " + odp;
+      // Tu później dodamy sprawdzanie poprawności i punkty
+    }
+
+    function pokaz(id) {
+      ["ekranStart","ekranLobby","ekranPersona","ekranCzekaj","ekranPodpowiadajacy","ekranZgadujacy"]
+        .forEach(e => document.getElementById(e).classList.add("hidden"));
+      document.getElementById(id).classList.remove("hidden");
     }
   </script>
 </body>
