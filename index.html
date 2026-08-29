@@ -18,13 +18,13 @@
         <h2>Test Połączenia</h2>
         <input type="text" id="word" placeholder="Wpisz hasło">
         <button id="btn">Wyślij na serwer Google</button>
-        <p id="wynik" style="color: #eccc68;">Inicjalizacja systemu...</p>
+        <p id="wynik" style="color: #eccc68;">Wyszukiwanie serwera...</p>
     </div>
 
     <script>
         window.onload = function() {
             const wynikElement = document.getElementById("wynik");
-            wynikElement.innerText = "Oczekiwanie na ruch...";
+            wynikElement.innerText = "System gotowy (Wersja 3.0)";
 
             document.getElementById('btn').addEventListener('click', () => {
                 const tekst = document.getElementById("word").value.trim();
@@ -35,11 +35,13 @@
                     return;
                 }
 
-                wynikElement.innerText = "⏳ Wysyłam bezpośrednio do chmury Google...";
+                wynikElement.innerText = "⏳ Łączenie bezpośrednie z bazą...";
                 wynikElement.style.color = "#eccc68";
 
-                // Używamy sztywnego linku bezpośrednio w funkcji fetch, bez zmiennych
-                fetch("https://firebasedatabase.app", {
+                // Używamy uproszczonego adresu bez poddomen regionalnych, co eliminuje błędy sieciowe DNS
+                const zapasowyURL = "https://firebaseio.com";
+
+                fetch(zapasowyURL, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -53,13 +55,13 @@
                         wynikElement.innerText = "✅ Sukces! Słowo '" + tekst + "' jest w bazie!";
                         wynikElement.style.color = "#2ed573";
                     } else {
-                        throw new Error("Serwer odrzucił dane. Kod: " + response.status);
+                        throw new Error("Serwer odrzucił dane. Status: " + response.status);
                     }
                 })
                 .catch((error) => {
-                    wynikElement.innerText = "❌ Błąd połączenia. Sprawdź konsolę.";
+                    wynikElement.innerText = "❌ Problem sieciowy. Przełącz na internet w telefonie.";
                     wynikElement.style.color = "#ff4757";
-                    console.error("Szczegóły bazy:", error);
+                    console.error("Szczegóły:", error);
                 });
             });
         };
