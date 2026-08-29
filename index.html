@@ -18,13 +18,15 @@
         <h2>Test Połączenia</h2>
         <input type="text" id="word" placeholder="Wpisz hasło">
         <button id="btn">Wyślij na serwer Google</button>
-        <p id="wynik" style="color: #eccc68;">Wyszukiwanie serwera...</p>
+        <p id="wynik" style="color: #eccc68;">Inicjalizacja...</p>
     </div>
 
     <script>
-        window.onload = function() {
+        // Ta funkcja odpala się dopiero po pełnym załadowaniu nowego kodu strony
+        window.addEventListener('DOMContentLoaded', () => {
             const wynikElement = document.getElementById("wynik");
-            wynikElement.innerText = "System gotowy (Wersja 3.0)";
+            wynikElement.innerText = "Gra gotowa (Wersja 4.0)";
+            wynikElement.style.color = "#eccc68";
 
             document.getElementById('btn').addEventListener('click', () => {
                 const tekst = document.getElementById("word").value.trim();
@@ -35,13 +37,13 @@
                     return;
                 }
 
-                wynikElement.innerText = "⏳ Łączenie bezpośrednie z bazą...";
+                wynikElement.innerText = "⏳ Wysyłam bezpośrednio do chmury Google...";
                 wynikElement.style.color = "#eccc68";
 
-                // Używamy uproszczonego adresu bez poddomen regionalnych, co eliminuje błędy sieciowe DNS
-                const zapasowyURL = "https://firebaseio.com";
+                // Używamy sztywnego zapisu bez parametrów, aby system nie skracał adresu URL
+                const adresChmury = "https://firebasedatabase.app";
 
-                fetch(zapasowyURL, {
+                fetch(adresChmury, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -59,12 +61,12 @@
                     }
                 })
                 .catch((error) => {
-                    wynikElement.innerText = "❌ Problem sieciowy. Przełącz na internet w telefonie.";
+                    wynikElement.innerText = "❌ Błąd wysyłania. Sprawdź internet.";
                     wynikElement.style.color = "#ff4757";
                     console.error("Szczegóły:", error);
                 });
             });
-        };
+        });
     </script>
 
 </body>
