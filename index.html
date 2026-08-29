@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Persona - Prosty Test</title>
+    <title>Persona - Test Połączenia</title>
     <style>
         body { font-family: Arial, sans-serif; background: #121212; color: white; text-align: center; padding: 50px; }
         .box { background: #1e1e1e; padding: 30px; border-radius: 15px; max-width: 400px; margin: 0 auto; border: 1px solid #333; }
-        input, button { width: 80%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-size: 16px; }
+        input, button { width: 80%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-size: 16px; text-align: center; }
+        input { background: #121212; color: white; border: 1px solid #444; }
         button { background: #2ed573; color: white; font-weight: bold; cursor: pointer; }
     </style>
 </head>
@@ -16,17 +17,17 @@
     <div class="box">
         <h2>Test Połączenia</h2>
         <input type="text" id="word" placeholder="Wpisz hasło">
-        <button onclick="wyslij()">Wyślij na serwer Google</button>
-        <p id="wynik" style="color: #eccc68;"></p>
+        <button id="btn">Wyślij na serwer Google</button>
+        <p id="wynik" style="color: #eccc68;">Oczekiwanie...</p>
     </div>
 
-    <!-- Ładujemy bezpieczne biblioteki, które działają bez blokad CORS -->
-    <script src="https://gstatic.com"></script>
-    <script src="https://gstatic.com"></script>
+    <!-- Najnowszy, oficjalny sposób ładowania baz danych Firebase (wersja 10) -->
+    <script type="module">
+        import { initializeApp } from "https://gstatic.com";
+        import { getDatabase, ref, set } from "https://gstatic.com";
 
-    <script>
-        // Twoja konfiguracja serwera
-        var config = {
+        // Twoja konfiguracja serwera z projektu Guess!!!
+        const firebaseConfig = {
             apiKey: "AIzaSyAnwBG2UCc9Bx8xbnfStR17hku_f-6e06Q",
             authDomain: "://firebaseapp.com",
             databaseURL: "https://firebasedatabase.app",
@@ -36,25 +37,36 @@
             appId: "1:743213180905:web:fb741f2efae9cf04c38d78"
         };
         
-        // Uruchomienie bazy danych
-        firebase.initializeApp(config);
-        var baza = firebase.database();
+        // Inicjalizacja połączenia
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
 
-        function wyslij() {
-            var tekst = document.getElementById("word").value;
-            document.getElementById("wynik").innerText = "⏳ Wysyłam...";
+        // Podpinamy działanie pod przycisk
+        document.getElementById('btn').addEventListener('click', () => {
+            const tekst = document.getElementById("word").value.trim();
+            const wynikElement = document.getElementById("wynik");
 
-            // Zapis do bazy danych
-            baza.ref("gra/aktualna_persona").set(tekst, function(error) {
-                if (error) {
-                    document.getElementById("wynik").innerText = "❌ Błąd: " + error.message;
-                    document.getElementById("wynik").style.color = "#ff4757";
-                } else {
-                    document.getElementById("wynik").innerText = "✅ Sukces! Słowo jest w bazie!";
-                    document.getElementById("wynik").style.color = "#2ed573";
-                }
+            if (tekst === "") {
+                wynikElement.innerText = "⚠️ Pole nie może być puste!";
+                wynikElement.style.color = "#ff4757";
+                return;
+            }
+
+            wynikElement.innerText = "⏳ Wysyłam...";
+            wynikElement.style.color = "#eccc68";
+
+            // Zapis do bazy danych pod kluczem 'gra/aktualna_persona'
+            set(ref(database, 'gra/aktualna_persona'), tekst)
+            .then(() => {
+                wynikElement.innerText = "✅ Sukces! Słowo '" + tekst + "' jest w bazie!";
+                wynikElement.style.color = "#2ed573";
+            })
+            .catch((error) => {
+                wynikElement.innerText = "❌ Błąd: " + error.message;
+                wynikElement.style.color = "#ff4757";
+                console.error(error);
             });
-        }
+        });
     </script>
 
 </body>
