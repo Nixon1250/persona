@@ -11,27 +11,27 @@
       background: #0b0b0b;
       color: #fff;
       min-height: 100vh;
-      padding: 16px;
+      padding: 12px;
       text-align: center;
     }
     .box {
       background: #161616;
       border-radius: 18px;
-      padding: 24px 20px;
+      padding: 20px 16px;
       max-width: 400px;
-      margin: 20px auto;
+      margin: 12px auto;
       border: 1px solid #2a2a2a;
     }
-    h1 { color: #2ed573; font-size: 26px; margin-bottom: 6px; }
-    h2 { color: #f1c40f; font-size: 20px; margin-bottom: 14px; }
-    p { color: #999; font-size: 14px; margin: 8px 0; }
+    h1 { color: #2ed573; font-size: 24px; margin-bottom: 4px; }
+    h2 { color: #f1c40f; font-size: 18px; margin-bottom: 10px; }
+    p { color: #999; font-size: 13px; margin: 6px 0; }
     input, button {
       width: 100%;
-      padding: 14px;
-      margin: 8px 0;
+      padding: 13px;
+      margin: 7px 0;
       border-radius: 12px;
       border: none;
-      font-size: 16px;
+      font-size: 15px;
     }
     input {
       background: #0f0f0f;
@@ -43,39 +43,60 @@
       background: #2ed573;
       color: #000;
       font-weight: 700;
-      cursor: pointer;
     }
     button.secondary { background: #333; color: #fff; }
     .code {
-      font-size: 42px;
+      font-size: 38px;
       font-weight: 800;
-      letter-spacing: 8px;
+      letter-spacing: 6px;
       color: #f1c40f;
-      margin: 18px 0;
+      margin: 14px 0;
     }
     .player {
       background: #222;
-      padding: 12px 16px;
+      padding: 10px 14px;
       border-radius: 10px;
-      margin: 6px 0;
+      margin: 5px 0;
       display: flex;
       justify-content: space-between;
-      font-size: 15px;
+      font-size: 14px;
     }
     .timer {
-      font-size: 64px;
+      font-size: 56px;
       font-weight: 800;
       color: #ff4757;
-      margin: 12px 0;
+      margin: 8px 0;
+      font-variant-numeric: tabular-nums;
     }
     .hint-box {
       background: #1e2a3a;
-      border-radius: 12px;
-      padding: 14px;
-      margin: 8px 0;
-      font-size: 20px;
+      border-radius: 10px;
+      padding: 12px;
+      margin: 6px 0;
+      font-size: 18px;
       color: #f1c40f;
       font-weight: 600;
+    }
+    .scoreboard {
+      background: #1a1a1a;
+      border-radius: 12px;
+      padding: 10px;
+      margin: 12px 0;
+      text-align: left;
+      border: 1px solid #333;
+    }
+    .scoreboard h3 {
+      color: #2ed573;
+      font-size: 14px;
+      margin-bottom: 6px;
+      text-align: center;
+    }
+    .score-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 14px;
+      border-bottom: 1px solid #2a2a2a;
     }
     .hidden { display: none !important; }
   </style>
@@ -86,7 +107,7 @@
     <h1>Persona</h1>
     <p>Zgadnij kto to</p>
     <button onclick="hostCreate()">Stwórz pokój</button>
-    <p style="margin:14px 0">lub</p>
+    <p style="margin:12px 0">lub</p>
     <input id="joinCode" placeholder="Kod pokoju" maxlength="5">
     <input id="joinNick" placeholder="Twój nick">
     <button onclick="playerJoin()">Dołącz</button>
@@ -101,7 +122,6 @@
 
   <div class="box hidden" id="s-persona">
     <h2>Wybierz personę</h2>
-    <p>Wpisz potajemnie</p>
     <input id="personaInput" placeholder="Np. Robert Lewandowski">
     <button onclick="submitPersona()">Gotowe</button>
   </div>
@@ -112,11 +132,12 @@
   </div>
 
   <div class="box hidden" id="s-hinter">
-    <h2>Twoja tura – dawaj wskazówkę</h2>
+    <h2>Twoja tura!</h2>
     <p>Runda <span id="roundH">1</span>/5</p>
     <div class="timer" id="timerH">20</div>
     <input id="hintInput" placeholder="Jedno słowo">
-    <button onclick="sendHint()">Wyślij</button>
+    <button onclick="sendHint()">Wyślij wskazówkę</button>
+    <div class="scoreboard" id="scoreH"></div>
   </div>
 
   <div class="box hidden" id="s-guesser">
@@ -127,11 +148,13 @@
     <input id="guessInput" placeholder="Kto to jest?">
     <button onclick="sendGuess()">Sprawdź</button>
     <p id="guessMsg"></p>
+    <div class="scoreboard" id="scoreG"></div>
   </div>
 
   <div class="box hidden" id="s-result">
     <h2 id="resTitle">Wynik</h2>
     <p id="resText"></p>
+    <div class="scoreboard" id="scoreR"></div>
     <button id="btnNext" class="hidden" onclick="nextPlayer()">Następna osoba</button>
     <p id="waitNext" class="hidden">Czekaj na hosta...</p>
   </div>
@@ -139,13 +162,39 @@
   <script>
     const DB = "https://guess-27805-default-rtdb.europe-west1.firebasedatabase.app";
     let room = "", myId = "p" + Math.random().toString(36).slice(2,8), myNick = "", isHost = false;
-    let poll = null;
+    let poll = null, timerInt = null, timeLeft = 20;
     const POINTS = [50,40,30,20,10];
+    const ROUND_TIME = 20; // sekund na rundę
 
     function show(id) {
       ["s-start","s-lobby","s-persona","s-wait","s-hinter","s-guesser","s-result"]
         .forEach(x => document.getElementById(x).classList.add("hidden"));
       document.getElementById(id).classList.remove("hidden");
+    }
+
+    function renderScores(players, targetId) {
+      if (!players) return;
+      let html = "<h3>Tabela punktów</h3>";
+      const arr = Object.entries(players).map(([id,p]) => ({id, ...p}));
+      arr.sort((a,b) => (b.score||0) - (a.score||0));
+      arr.forEach(p => {
+        html += `<div class="score-row"><span>${p.nick}</span><span>${p.score||0} pkt</span></div>`;
+      });
+      document.getElementById(targetId).innerHTML = html;
+    }
+
+    function startTimer(displayId, onEnd) {
+      clearInterval(timerInt);
+      timeLeft = ROUND_TIME;
+      document.getElementById(displayId).innerText = timeLeft;
+      timerInt = setInterval(() => {
+        timeLeft--;
+        document.getElementById(displayId).innerText = timeLeft;
+        if (timeLeft <= 0) {
+          clearInterval(timerInt);
+          if (onEnd) onEnd();
+        }
+      }, 1000);
     }
 
     function hostCreate() {
@@ -157,11 +206,12 @@
         body: JSON.stringify({
           status: "lobby",
           host: myId,
-          players: { [myId]: { nick: "Host", persona: null } },
+          players: { [myId]: { nick: "Host", persona: null, score: 0 } },
           order: [myId],
           current: null,
           round: 1,
-          hints: []
+          hints: [],
+          timerStart: null
         })
       }).then(() => {
         document.getElementById("roomCode").innerText = room;
@@ -180,7 +230,7 @@
         if (!data || data.status !== "lobby") return alert("Pokój niedostępny");
         return fetch(`${DB}/rooms/${room}/players/${myId}.json`, {
           method: "PUT",
-          body: JSON.stringify({ nick: myNick, persona: null })
+          body: JSON.stringify({ nick: myNick, persona: null, score: 0 })
         }).then(() => {
           const order = data.order || [];
           if (!order.includes(myId)) order.push(myId);
@@ -202,7 +252,6 @@
       fetch(`${DB}/rooms/${room}.json`).then(r => r.json()).then(data => {
         if (!data) return;
 
-        // LOBBY
         if (data.status === "lobby") {
           let html = "";
           for (let id in data.players) {
@@ -211,13 +260,8 @@
           document.getElementById("playerList").innerHTML = html;
         }
 
-        // PERSONA
         if (data.status === "persona") {
           show("s-persona");
-        }
-
-        // CZEKANIE NA PERSONY
-        if (data.status === "persona") {
           let all = true, html = "";
           for (let id in data.players) {
             const p = data.players[id];
@@ -231,12 +275,17 @@
             const first = order[Math.floor(Math.random() * order.length)];
             fetch(`${DB}/rooms/${room}.json`, {
               method: "PATCH",
-              body: JSON.stringify({ status: "turn", current: first, round: 1, hints: [] })
+              body: JSON.stringify({
+                status: "turn",
+                current: first,
+                round: 1,
+                hints: [],
+                timerStart: Date.now()
+              })
             });
           }
         }
 
-        // TURA
         if (data.status === "turn") {
           const amI = data.current === myId;
           const rnd = data.round || 1;
@@ -244,21 +293,28 @@
           if (amI) {
             show("s-hinter");
             document.getElementById("roundH").innerText = rnd;
+            renderScores(data.players, "scoreH");
+            // start timer only once per round
+            if (!timerInt) startTimer("timerH");
           } else {
             show("s-guesser");
             document.getElementById("roundG").innerText = rnd;
             document.getElementById("pts").innerText = POINTS[rnd-1] || 10;
+            renderScores(data.players, "scoreG");
             let h = "";
             (data.hints || []).forEach(w => h += `<div class="hint-box">${w}</div>`);
             document.getElementById("hintsList").innerHTML = h || "<p style='color:#555'>Czekam na wskazówkę...</p>";
+            if (!timerInt) startTimer("timerG");
           }
         }
 
-        // WYNIK
         if (data.status === "result") {
+          clearInterval(timerInt);
+          timerInt = null;
           show("s-result");
           document.getElementById("resTitle").innerText = data.won ? "Odgadnięto!" : "Koniec tury";
           document.getElementById("resText").innerText = data.msg || "";
+          renderScores(data.players, "scoreR");
           if (isHost) {
             document.getElementById("btnNext").classList.remove("hidden");
             document.getElementById("waitNext").classList.add("hidden");
@@ -286,6 +342,8 @@
     function sendHint() {
       const word = document.getElementById("hintInput").value.trim();
       if (!word) return;
+      clearInterval(timerInt);
+      timerInt = null;
 
       fetch(`${DB}/rooms/${room}.json`).then(r => r.json()).then(data => {
         const hints = data.hints || [];
@@ -293,7 +351,6 @@
         const next = (data.round || 1) + 1;
 
         if (hints.length >= 5) {
-          // koniec 5 rund
           fetch(`${DB}/rooms/${room}.json`, {
             method: "PATCH",
             body: JSON.stringify({
@@ -306,7 +363,14 @@
         } else {
           fetch(`${DB}/rooms/${room}.json`, {
             method: "PATCH",
-            body: JSON.stringify({ hints, round: next })
+            body: JSON.stringify({
+              hints,
+              round: next,
+              timerStart: Date.now()
+            })
+          }).then(() => {
+            // nowy timer na kolejną rundę
+            startTimer(data.current === myId ? "timerH" : "timerG");
           });
         }
         document.getElementById("hintInput").value = "";
@@ -320,14 +384,25 @@
       fetch(`${DB}/rooms/${room}.json`).then(r => r.json()).then(data => {
         const correct = (data.players[data.current]?.persona || "").toLowerCase();
         if (g === correct) {
-          // TRAFIONE – wszyscy przechodzą do wyniku
-          fetch(`${DB}/rooms/${room}.json`, {
-            method: "PATCH",
-            body: JSON.stringify({
-              status: "result",
-              won: true,
-              msg: myNick + " odgadł poprawnie!"
-            })
+          clearInterval(timerInt);
+          timerInt = null;
+          const pts = POINTS[(data.round || 1) - 1] || 10;
+
+          // dodaj punkty zgadującemu
+          const newScore = (data.players[myId].score || 0) + pts;
+
+          fetch(`${DB}/rooms/${room}/players/${myId}/score.json`, {
+            method: "PUT",
+            body: JSON.stringify(newScore)
+          }).then(() => {
+            fetch(`${DB}/rooms/${room}.json`, {
+              method: "PATCH",
+              body: JSON.stringify({
+                status: "result",
+                won: true,
+                msg: `${myNick} odgadł! +${pts} pkt`
+              })
+            });
           });
         } else {
           document.getElementById("guessMsg").innerText = "Źle, próbuj dalej";
@@ -338,6 +413,9 @@
 
     function nextPlayer() {
       if (!isHost) return;
+      clearInterval(timerInt);
+      timerInt = null;
+
       fetch(`${DB}/rooms/${room}.json`).then(r => r.json()).then(data => {
         const order = data.order || Object.keys(data.players);
         let idx = order.indexOf(data.current);
@@ -351,6 +429,7 @@
             current: next,
             round: 1,
             hints: [],
+            timerStart: Date.now(),
             won: false,
             msg: ""
           })
