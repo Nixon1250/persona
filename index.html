@@ -22,13 +22,11 @@
     </div>
 
     <script>
-        // Całkowicie niezależny mechanizm wysyłania danych przez wbudowane API sieciowe Google (REST)
-        // Eliminuje potrzebę wczytywania zewnętrznych plików skryptów .js
         window.onload = function() {
             const wynikElement = document.getElementById("wynik");
-            wynikElement.innerText = "Oczekiwanie na ruch... (System wbudowany)";
+            wynikElement.innerText = "Oczekiwanie na ruch...";
 
-            // Adres Twojej konkretnej bazy danych Realtime Database w Belgii
+            // TUTAJ JEST TA BRAKUJĄCA LINIJKA:
             const databaseURL = "https://firebasedatabase.app";
 
             document.getElementById('btn').addEventListener('click', () => {
@@ -43,9 +41,8 @@
                 wynikElement.innerText = "⏳ Wysyłam bezpośrednio do chmury Google...";
                 wynikElement.style.color = "#eccc68";
 
-                // Wysyłamy proste żądanie sieciowe metodą PATCH (czysta komunikacja z serwerem)
                 fetch(databaseURL, {
-                    method: 'PATCH',
+                    method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
                     },
@@ -58,13 +55,13 @@
                         wynikElement.innerText = "✅ Sukces! Słowo '" + tekst + "' jest w bazie!";
                         wynikElement.style.color = "#2ed573";
                     } else {
-                        throw new Error("Serwer zwrócił błąd: " + response.status);
+                        throw new Error("Serwer odrzucił dane. Kod: " + response.status);
                     }
                 })
                 .catch((error) => {
-                    wynikElement.innerText = "❌ Błąd sieciowy: " + error.message;
+                    wynikElement.innerText = "❌ Błąd połączenia. Sprawdź konsolę.";
                     wynikElement.style.color = "#ff4757";
-                    console.error(error);
+                    console.error("Szczegóły bazy:", error);
                 });
             });
         };
