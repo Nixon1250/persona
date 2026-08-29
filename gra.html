@@ -15,18 +15,16 @@
 <body>
 
     <div class="box">
-        <h2>Test Połączenia</h2>
+        <h2>Test Połączenia (Nowy Kanał)</h2>
         <input type="text" id="word" placeholder="Wpisz hasło">
         <button id="btn">Wyślij na serwer Google</button>
         <p id="wynik" style="color: #eccc68;">Inicjalizacja...</p>
     </div>
 
     <script>
-        // Ta funkcja odpala się dopiero po pełnym załadowaniu nowego kodu strony
-        window.addEventListener('DOMContentLoaded', () => {
+        window.onload = function() {
             const wynikElement = document.getElementById("wynik");
-            wynikElement.innerText = "Gra gotowa (Wersja 4.0)";
-            wynikElement.style.color = "#eccc68";
+            wynikElement.innerText = "System online!";
 
             document.getElementById('btn').addEventListener('click', () => {
                 const tekst = document.getElementById("word").value.trim();
@@ -37,13 +35,13 @@
                     return;
                 }
 
-                wynikElement.innerText = "⏳ Wysyłam bezpośrednio do chmury Google...";
+                wynikElement.innerText = "⏳ Wysyłam do Firebase...";
                 wynikElement.style.color = "#eccc68";
 
-                // Używamy sztywnego zapisu bez parametrów, aby system nie skracał adresu URL
-                const adresChmury = "https://firebasedatabase.app";
+                // Prawidłowy, sztywny adres Twojej bazy danych w Europie
+                const urlBazy = "https://firebasedatabase.app";
 
-                fetch(adresChmury, {
+                fetch(urlBazy, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
@@ -57,16 +55,16 @@
                         wynikElement.innerText = "✅ Sukces! Słowo '" + tekst + "' jest w bazie!";
                         wynikElement.style.color = "#2ed573";
                     } else {
-                        throw new Error("Serwer odrzucił dane. Status: " + response.status);
+                        throw new Error("Serwer odrzucił dane.");
                     }
                 })
                 .catch((error) => {
-                    wynikElement.innerText = "❌ Błąd wysyłania. Sprawdź internet.";
+                    wynikElement.innerText = "❌ Błąd sieciowy. Zobacz konsolę.";
                     wynikElement.style.color = "#ff4757";
-                    console.error("Szczegóły:", error);
+                    console.error("Szczegóły połączenia:", error);
                 });
             });
-        });
+        };
     </script>
 
 </body>
