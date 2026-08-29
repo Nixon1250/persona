@@ -21,17 +21,15 @@
         <p id="wynik" style="color: #eccc68;">Inicjalizacja systemu...</p>
     </div>
 
-    <!-- Stabilne i niezawodne biblioteki z serwera unpkg -->
-    <script src="https://unpkg.com"></script>
-    <script src="https://unpkg.com"></script>
+    <!-- Najbardziej niezawodny serwer dystrybucyjny Google - brak możliwości blokady CORS na GitHubie -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
 
     <script>
-        // Ta funkcja uruchomi się, gdy przeglądarka wczyta stronę i powyższe skrypty
         window.onload = function() {
             const wynikElement = document.getElementById("wynik");
             wynikElement.innerText = "Oczekiwanie na ruch...";
 
-            // Twoja konfiguracja serwera z projektu Guess!!!
             const firebaseConfig = {
                 apiKey: "AIzaSyAnwBG2UCc9Bx8xbnfStR17hku_f-6e06Q",
                 authDomain: "://firebaseapp.com",
@@ -42,12 +40,10 @@
                 appId: "1:743213180905:web:fb741f2efae9cf04c38d78"
             };
             
-            // Sprawdzamy czy Firebase się wczytał
             if (typeof firebase !== 'undefined') {
                 firebase.initializeApp(firebaseConfig);
                 const database = firebase.database();
 
-                // Reakcja na kliknięcie przycisku
                 document.getElementById('btn').addEventListener('click', () => {
                     const tekst = document.getElementById("word").value.trim();
 
@@ -60,7 +56,6 @@
                     wynikElement.innerText = "⏳ Wysyłam do chmury Google...";
                     wynikElement.style.color = "#eccc68";
 
-                    // Zapis do bazy danych Realtime Database
                     database.ref('gra/aktualna_persona').set(tekst)
                     .then(() => {
                         wynikElement.innerText = "✅ Sukces! Słowo '" + tekst + "' jest w bazie!";
