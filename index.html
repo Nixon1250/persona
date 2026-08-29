@@ -26,9 +26,6 @@
             const wynikElement = document.getElementById("wynik");
             wynikElement.innerText = "Oczekiwanie na ruch...";
 
-            // TUTAJ JEST TA BRAKUJĄCA LINIJKA:
-            const databaseURL = "https://firebasedatabase.app";
-
             document.getElementById('btn').addEventListener('click', () => {
                 const tekst = document.getElementById("word").value.trim();
 
@@ -41,7 +38,8 @@
                 wynikElement.innerText = "⏳ Wysyłam bezpośrednio do chmury Google...";
                 wynikElement.style.color = "#eccc68";
 
-                fetch(databaseURL, {
+                // Używamy sztywnego linku bezpośrednio w funkcji fetch, bez zmiennych
+                fetch("https://firebasedatabase.app", {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json'
