@@ -44,7 +44,6 @@
       color: #000;
       font-weight: 700;
     }
-    button.secondary { background: #333; color: #fff; }
     .code {
       font-size: 38px;
       font-weight: 800;
@@ -131,15 +130,17 @@
     <div id="readyList"></div>
   </div>
 
+  <!-- PODPOWIADAJĄCY -->
   <div class="box hidden" id="s-hinter">
-    <h2>Twoja tura!</h2>
+    <h2>Twoja tura – daj wskazówkę!</h2>
     <p>Runda <span id="roundH">1</span>/5</p>
-    <div class="timer" id="timerH">20</div>
+    <div class="timer" id="timerH">12</div>
     <input id="hintInput" placeholder="Jedno słowo">
-    <button onclick="sendHint()">Wyślij wskazówkę</button>
+    <button id="btnHint" onclick="sendHint()">Wyślij wskazówkę</button>
     <div class="scoreboard" id="scoreH"></div>
   </div>
 
+  <!-- ZGADUJĄCY -->
   <div class="box hidden" id="s-guesser">
     <h2>Zgaduj!</h2>
     <p>Runda <span id="roundG">1</span>/5 • <span id="pts">50</span> pkt</p>
@@ -162,9 +163,10 @@
   <script>
     const DB = "https://guess-27805-default-rtdb.europe-west1.firebasedatabase.app";
     let room = "", myId = "p" + Math.random().toString(36).slice(2,8), myNick = "", isHost = false;
-    let poll = null, timerInt = null, timeLeft = 20;
+    let poll = null, timerInt = null;
     const POINTS = [50,40,30,20,10];
-    const ROUND_TIME = 20; // sekund na rundę
+    const HINT_TIME = 12;   // czas dla podpowiadającego
+    const GUESS_TIME = 20;  // czas dla zgadujących (po wskazówce)
 
     function show(id) {
       ["s-start","s-lobby","s-persona","s-wait","s-hinter","s-guesser","s-result"]
@@ -183,16 +185,46 @@
       document.getElementById(targetId).innerHTML = html;
     }
 
-    function startTimer(displayId, onEnd) {
-      clearInterval(timerInt);
-      timeLeft = ROUND_TIME;
-      document.getElementById(displayId).innerText = timeLeft;
+    function clearTimer() {
+      if (timerInt) clearInterval(timerInt);
+      timerInt = null;
+    }
+
+    function startHintTimer() {
+      clearTimer();
+      let t = HINT_TIME;
+      document.getElementById("timerH").innerText = t;
       timerInt = setInterval(() => {
-        timeLeft--;
-        document.getElementById(displayId).innerText = timeLeft;
-        if (timeLeft <= 0) {
-          clearInterval(timerInt);
-          if (onEnd) onEnd();
+        t--;
+        document.getElementById("timerH").innerText = t;
+        if (t <= 0) {
+          clearTimer();
+          // nie zdążył → pomijamy turę
+          if (isHost) {
+            fetch(`${DB}/rooms/${room}.json`, {
+              method: "PATCH",
+              body: JSON.stringify({
+                status: "result",
+                won: false,
+                msg: "Podpowiadający nie zdążył – tura pominięta"
+              })
+            });
+          }
+        }
+      }, 1000);
+    }
+
+    function startGuessTimer() {
+      clearTimer();
+      let t = GUESS_TIME;
+      document.getElementById("timerG").innerText = t;
+      timerInt = setInterval(() => {
+        t--;
+        document.getElementById("timerG").innerText = t;
+        if (t <= 0) {
+          clearTimer();
+          // czas na zgadywanie minął → następna runda wskazówki
+          // (host może to obsłużyć, na razie nic nie robimy automatycznie)
         }
       }, 1000);
     }
@@ -211,7 +243,7 @@
           current: null,
           round: 1,
           hints: [],
-          timerStart: null
+          phase: "hint"          // "hint" albo "guess"
         })
       }).then(() => {
         document.getElementById("roomCode").innerText = room;
@@ -245,7 +277,7 @@
 
     function startPoll() {
       if (poll) clearInterval(poll);
-      poll = setInterval(sync, 1000);
+      poll = setInterval(sync, 900);
     }
 
     function sync() {
@@ -280,7 +312,7 @@
                 current: first,
                 round: 1,
                 hints: [],
-                timerStart: Date.now()
+                phase: "hint"
               })
             });
           }
@@ -289,28 +321,41 @@
         if (data.status === "turn") {
           const amI = data.current === myId;
           const rnd = data.round || 1;
+          const phase = data.phase || "hint";
 
           if (amI) {
+            // JESTEM PODPOWIADAJĄCYM
             show("s-hinter");
             document.getElementById("roundH").innerText = rnd;
             renderScores(data.players, "scoreH");
-            // start timer only once per round
-            if (!timerInt) startTimer("timerH");
+
+            if (phase === "hint" && !timerInt) {
+              startHintTimer();
+            }
           } else {
+            // JESTEM ZGADUJĄCYM
             show("s-guesser");
             document.getElementById("roundG").innerText = rnd;
             document.getElementById("pts").innerText = POINTS[rnd-1] || 10;
             renderScores(data.players, "scoreG");
+
             let h = "";
             (data.hints || []).forEach(w => h += `<div class="hint-box">${w}</div>`);
             document.getElementById("hintsList").innerHTML = h || "<p style='color:#555'>Czekam na wskazówkę...</p>";
-            if (!timerInt) startTimer("timerG");
+
+            // Timer zgadujących odpala się TYLKO gdy phase === "guess"
+            if (phase === "guess" && !timerInt) {
+              startGuessTimer();
+            }
+            if (phase === "hint") {
+              clearTimer();
+              document.getElementById("timerG").innerText = "-";
+            }
           }
         }
 
         if (data.status === "result") {
-          clearInterval(timerInt);
-          timerInt = null;
+          clearTimer();
           show("s-result");
           document.getElementById("resTitle").innerText = data.won ? "Odgadnięto!" : "Koniec tury";
           document.getElementById("resText").innerText = data.msg || "";
@@ -342,35 +387,34 @@
     function sendHint() {
       const word = document.getElementById("hintInput").value.trim();
       if (!word) return;
-      clearInterval(timerInt);
-      timerInt = null;
+      clearTimer();
 
       fetch(`${DB}/rooms/${room}.json`).then(r => r.json()).then(data => {
         const hints = data.hints || [];
         hints.push(word);
-        const next = (data.round || 1) + 1;
+        const nextRound = (data.round || 1) + 1;
 
         if (hints.length >= 5) {
+          // 5 wskazówek – koniec tury
           fetch(`${DB}/rooms/${room}.json`, {
             method: "PATCH",
             body: JSON.stringify({
               status: "result",
               won: false,
               msg: "Nikt nie odgadł po 5 wskazówkach",
-              hints
+              hints,
+              phase: "hint"
             })
           });
         } else {
+          // przechodzimy do fazy zgadywania
           fetch(`${DB}/rooms/${room}.json`, {
             method: "PATCH",
             body: JSON.stringify({
               hints,
-              round: next,
-              timerStart: Date.now()
+              round: nextRound,
+              phase: "guess"          // ← zgadujący dostają timer
             })
-          }).then(() => {
-            // nowy timer na kolejną rundę
-            startTimer(data.current === myId ? "timerH" : "timerG");
           });
         }
         document.getElementById("hintInput").value = "";
@@ -384,11 +428,8 @@
       fetch(`${DB}/rooms/${room}.json`).then(r => r.json()).then(data => {
         const correct = (data.players[data.current]?.persona || "").toLowerCase();
         if (g === correct) {
-          clearInterval(timerInt);
-          timerInt = null;
+          clearTimer();
           const pts = POINTS[(data.round || 1) - 1] || 10;
-
-          // dodaj punkty zgadującemu
           const newScore = (data.players[myId].score || 0) + pts;
 
           fetch(`${DB}/rooms/${room}/players/${myId}/score.json`, {
@@ -413,8 +454,7 @@
 
     function nextPlayer() {
       if (!isHost) return;
-      clearInterval(timerInt);
-      timerInt = null;
+      clearTimer();
 
       fetch(`${DB}/rooms/${room}.json`).then(r => r.json()).then(data => {
         const order = data.order || Object.keys(data.players);
@@ -429,7 +469,7 @@
             current: next,
             round: 1,
             hints: [],
-            timerStart: Date.now(),
+            phase: "hint",
             won: false,
             msg: ""
           })
