@@ -3,117 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Persona - Test Połączenia</title>
+    <title>Persona - Prosty Test</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #121212;
-            color: white;
-            text-align: center;
-            padding: 20px;
-            margin: 0;
-        }
-        .container {
-            background-color: #1e1e1e;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
-            max-width: 450px;
-            margin: 40px auto;
-            border: 1px solid #2e2e2e;
-        }
-        h1 { color: #2ed573; margin-bottom: 5px; }
-        .subtitle { color: #888; font-size: 14px; margin-bottom: 25px; }
-        input {
-            width: 85%;
-            padding: 14px;
-            margin: 15px 0;
-            border-radius: 10px;
-            border: 2px solid #2e2e2e;
-            background-color: #121212;
-            color: white;
-            font-size: 16px;
-            text-align: center;
-        }
-        input:focus { border-color: #2ed573; outline: none; }
-        button {
-            width: 90%;
-            padding: 14px;
-            background-color: #2ed573;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        button:hover { background-color: #26af5f; transform: scale(1.02); }
-        #status {
-            margin-top: 15px;
-            font-size: 14px;
-            color: #eccc68;
-        }
+        body { font-family: Arial, sans-serif; background: #121212; color: white; text-align: center; padding: 50px; }
+        .box { background: #1e1e1e; padding: 30px; border-radius: 15px; max-width: 400px; margin: 0 auto; border: 1px solid #333; }
+        input, button { width: 80%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-size: 16px; }
+        button { background: #2ed573; color: white; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>Persona: Panel Testowy</h1>
-        <div class="subtitle">Wysyłanie danych do bazy Google Firebase</div>
-        
-        <p>Wpisz testowe hasło dla znajomych:</p>
-        <input type="text" id="testWord" placeholder="Np. Robert Lewandowski">
-        <button id="sendBtn" onclick="saveToDatabase()">Wyślij na serwer</button>
-        
-        <div id="status">Oczekiwanie na ruch...</div>
+    <div class="box">
+        <h2>Test Połączenia</h2>
+        <input type="text" id="word" placeholder="Wpisz hasło">
+        <button onclick="wyslij()">Wyślij na serwer Google</button>
+        <p id="wynik" style="color: #eccc68;"></p>
     </div>
 
-    <!-- Załadowanie oficjalnych bibliotek Firebase od Google -->
-    <script type="module">
-        import { initializeApp } from "https://gstatic.com";
-        import { getDatabase, ref, set } from "https://gstatic.com";
+    <!-- Ładujemy bezpieczne biblioteki, które działają bez blokad CORS -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
 
-        // Twoja osobista konfiguracja z projektu Guess!!!
-        const firebaseConfig = {
+    <script>
+        // Twoja konfiguracja serwera
+        var config = {
             apiKey: "AIzaSyAnwBG2UCc9Bx8xbnfStR17hku_f-6e06Q",
-            authDomain: "guess-27805.firebaseapp.com",
-            databaseURL: "https://guess-27805-default-rtdb.europe-west1.firebasedatabase.app",
+            authDomain: "://firebaseapp.com",
+            databaseURL: "https://firebasedatabase.app",
             projectId: "guess-27805",
             storageBucket: "guess-27805.firebasestorage.app",
             messagingSenderId: "743213180905",
-            appId: "1:743213180905:web:fb741f2efae9cf04c38d78",
-            measurementId: "G-0X347EZRF6"
+            appId: "1:743213180905:web:fb741f2efae9cf04c38d78"
         };
+        
+        // Uruchomienie bazy danych
+        firebase.initializeApp(config);
+        var baza = firebase.database();
 
-        // Inicjalizacja połączenia
-        const app = initializeApp(firebaseConfig);
-        const database = getDatabase(app);
+        function wyslij() {
+            var tekst = document.getElementById("word").value;
+            document.getElementById("wynik").innerText = "⏳ Wysyłam...";
 
-        // Funkcja wysyłająca dane (zrobiona jako globalna dla przycisku HTML)
-        window.saveToDatabase = function() {
-            const wordInput = document.getElementById('testWord').value.trim();
-            const statusDiv = document.getElementById('status');
-            
-            if (wordInput === "") {
-                statusDiv.innerText = "⚠️ Nie możesz wysłać pustego pola!";
-                statusDiv.style.color = "#ff4757";
-                return;
-            }
-
-            statusDiv.innerText = "⏳ Wysyłanie do chmury...";
-            statusDiv.style.color = "#eccc68";
-
-            // Zapisujemy słowo w bazie danych pod kluczem 'aktualna_persona'
-            set(ref(database, 'gra/aktualna_persona'), wordInput)
-            .then(() => {
-                statusDiv.innerText = "✅ Sukces! Słowo '" + wordInput + "' jest na serwerze!";
-                statusDiv.style.color = "#2ed573";
-            })
-            .catch((error) => {
-                statusDiv.innerText = "❌ Błąd serwera: " + error.message;
-                statusDiv.style.color = "#ff4757";
-                console.error(error);
+            // Zapis do bazy danych
+            baza.ref("gra/aktualna_persona").set(tekst, function(error) {
+                if (error) {
+                    document.getElementById("wynik").innerText = "❌ Błąd: " + error.message;
+                    document.getElementById("wynik").style.color = "#ff4757";
+                } else {
+                    document.getElementById("wynik").innerText = "✅ Sukces! Słowo jest w bazie!";
+                    document.getElementById("wynik").style.color = "#2ed573";
+                }
             });
         }
     </script>
