@@ -45,7 +45,6 @@
       font-weight: 700;
       cursor: pointer;
     }
-    button:active { transform: scale(0.97); }
     button.secondary { background: #333; color: #fff; }
     .code {
       font-size: 42px;
@@ -61,7 +60,6 @@
       margin: 6px 0;
       display: flex;
       justify-content: space-between;
-      align-items: center;
       font-size: 15px;
     }
     .timer {
@@ -69,372 +67,295 @@
       font-weight: 800;
       color: #ff4757;
       margin: 12px 0;
-      font-variant-numeric: tabular-nums;
     }
     .hint-box {
       background: #1e2a3a;
-      border: 1px solid #2a3f55;
       border-radius: 12px;
       padding: 14px;
-      margin: 10px 0;
+      margin: 8px 0;
       font-size: 20px;
       color: #f1c40f;
       font-weight: 600;
     }
-    .points {
-      font-size: 15px;
-      color: #2ed573;
-      margin-bottom: 8px;
-    }
     .hidden { display: none !important; }
-    #status { color: #777; font-size: 13px; margin-top: 12px; }
   </style>
 </head>
 <body>
 
-  <!-- START -->
   <div class="box" id="s-start">
     <h1>Persona</h1>
-    <p>Gra imprezowa – zgadnij kto to</p>
+    <p>Zgadnij kto to</p>
     <button onclick="hostCreate()">Stwórz pokój</button>
-    <p style="margin:14px 0">lub dołącz</p>
+    <p style="margin:14px 0">lub</p>
     <input id="joinCode" placeholder="Kod pokoju" maxlength="5">
     <input id="joinNick" placeholder="Twój nick">
     <button onclick="playerJoin()">Dołącz</button>
-    <div id="status"></div>
   </div>
 
-  <!-- LOBBY -->
   <div class="box hidden" id="s-lobby">
     <h1>Pokój</h1>
     <div class="code" id="roomCode">-----</div>
-    <p>Kod dla znajomych</p>
     <div id="playerList"></div>
     <button id="btnStart" class="hidden" onclick="startGame()">Rozpocznij grę</button>
   </div>
 
-  <!-- WYBÓR PERSONY -->
   <div class="box hidden" id="s-persona">
     <h2>Wybierz personę</h2>
-    <p>Wpisz potajemnie (znana osoba lub znajomy)</p>
+    <p>Wpisz potajemnie</p>
     <input id="personaInput" placeholder="Np. Robert Lewandowski">
     <button onclick="submitPersona()">Gotowe</button>
   </div>
 
-  <!-- CZEKANIE -->
   <div class="box hidden" id="s-wait">
     <h2>Czekamy na wszystkich</h2>
     <div id="readyList"></div>
   </div>
 
-  <!-- PODPOWIADAJĄCY -->
   <div class="box hidden" id="s-hinter">
-    <h2>Twoja tura!</h2>
-    <p>Runda <span id="roundNumH">1</span>/5</p>
-    <div class="timer" id="timerH">25</div>
-    <input id="hintInput" placeholder="Jedno słowo wskazówki">
-    <button onclick="sendHint()">Wyślij wskazówkę</button>
+    <h2>Twoja tura – dawaj wskazówkę</h2>
+    <p>Runda <span id="roundH">1</span>/5</p>
+    <div class="timer" id="timerH">20</div>
+    <input id="hintInput" placeholder="Jedno słowo">
+    <button onclick="sendHint()">Wyślij</button>
   </div>
 
-  <!-- ZGADUJĄCY -->
   <div class="box hidden" id="s-guesser">
     <h2>Zgaduj!</h2>
-    <div class="points">Punkty za tę rundę: <span id="pointsVal">50</span></div>
-    <p>Runda <span id="roundNumG">1</span>/5</p>
-    <div class="timer" id="timerG">25</div>
+    <p>Runda <span id="roundG">1</span>/5 • <span id="pts">50</span> pkt</p>
+    <div class="timer" id="timerG">20</div>
     <div id="hintsList"></div>
     <input id="guessInput" placeholder="Kto to jest?">
-    <button onclick="sendGuess()">Wyślij odpowiedź</button>
-    <div id="guessStatus"></div>
+    <button onclick="sendGuess()">Sprawdź</button>
+    <p id="guessMsg"></p>
   </div>
 
-  <!-- WYNIK TURY -->
   <div class="box hidden" id="s-result">
-    <h2 id="resultTitle">Koniec tury</h2>
-    <p id="resultText"></p>
-    <button onclick="nextTurn()">Następna osoba</button>
+    <h2 id="resTitle">Wynik</h2>
+    <p id="resText"></p>
+    <button id="btnNext" class="hidden" onclick="nextPlayer()">Następna osoba</button>
+    <p id="waitNext" class="hidden">Czekaj na hosta...</p>
   </div>
 
   <script>
     const DB = "https://guess-27805-default-rtdb.europe-west1.firebasedatabase.app";
-    let room = "";
-    let myId = "p" + Math.random().toString(36).slice(2, 9);
-    let myNick = "";
-    let isHost = false;
+    let room = "", myId = "p" + Math.random().toString(36).slice(2,8), myNick = "", isHost = false;
     let poll = null;
-    let timerInterval = null;
-    let currentRound = 1;
-    const POINTS = [50, 40, 30, 20, 10];
+    const POINTS = [50,40,30,20,10];
 
     function show(id) {
       ["s-start","s-lobby","s-persona","s-wait","s-hinter","s-guesser","s-result"]
-        .forEach(s => document.getElementById(s).classList.add("hidden"));
+        .forEach(x => document.getElementById(x).classList.add("hidden"));
       document.getElementById(id).classList.remove("hidden");
     }
 
-    // ===== HOST TWORZY POKÓJ =====
     function hostCreate() {
-      room = Math.random().toString(36).slice(2, 7).toUpperCase();
+      room = Math.random().toString(36).slice(2,7).toUpperCase();
       isHost = true;
       myNick = "Host";
-
-      const data = {
-        status: "lobby",
-        host: myId,
-        players: {
-          [myId]: { nick: "Host", persona: null, score: 0 }
-        },
-        order: [myId],
-        currentHinter: null,
-        round: 1,
-        hints: [],
-        guessed: false
-      };
-
       fetch(`${DB}/rooms/${room}.json`, {
         method: "PUT",
-        body: JSON.stringify(data)
+        body: JSON.stringify({
+          status: "lobby",
+          host: myId,
+          players: { [myId]: { nick: "Host", persona: null } },
+          order: [myId],
+          current: null,
+          round: 1,
+          hints: []
+        })
       }).then(() => {
         document.getElementById("roomCode").innerText = room;
         document.getElementById("btnStart").classList.remove("hidden");
         show("s-lobby");
-        startPolling();
+        startPoll();
       });
     }
 
-    // ===== GRACZ DOŁĄCZA =====
     function playerJoin() {
       room = document.getElementById("joinCode").value.trim().toUpperCase();
       myNick = document.getElementById("joinNick").value.trim() || "Gracz";
-      if (room.length < 4) return alert("Wpisz kod");
+      if (room.length < 4) return alert("Zły kod");
 
-      fetch(`${DB}/rooms/${room}.json`)
-        .then(r => r.json())
-        .then(data => {
-          if (!data || data.status !== "lobby") {
-            alert("Pokój nie istnieje lub gra już wystartowała");
-            return;
-          }
-          return fetch(`${DB}/rooms/${room}/players/${myId}.json`, {
-            method: "PUT",
-            body: JSON.stringify({ nick: myNick, persona: null, score: 0 })
-          }).then(() => {
-            // dodaj do kolejki
-            const order = data.order || [];
-            order.push(myId);
-            return fetch(`${DB}/rooms/${room}/order.json`, {
-              method: "PUT",
-              body: JSON.stringify(order)
-            });
-          });
-        })
-        .then(() => {
-          document.getElementById("roomCode").innerText = room;
-          show("s-lobby");
-          startPolling();
+      fetch(`${DB}/rooms/${room}.json`).then(r => r.json()).then(data => {
+        if (!data || data.status !== "lobby") return alert("Pokój niedostępny");
+        return fetch(`${DB}/rooms/${room}/players/${myId}.json`, {
+          method: "PUT",
+          body: JSON.stringify({ nick: myNick, persona: null })
+        }).then(() => {
+          const order = data.order || [];
+          if (!order.includes(myId)) order.push(myId);
+          return fetch(`${DB}/rooms/${room}/order.json`, { method: "PUT", body: JSON.stringify(order) });
         });
-    }
-
-    // ===== POLLING =====
-    function startPolling() {
-      if (poll) clearInterval(poll);
-      poll = setInterval(sync, 1200);
-    }
-
-    function sync() {
-      fetch(`${DB}/rooms/${room}.json`)
-        .then(r => r.json())
-        .then(data => {
-          if (!data) return;
-
-          // LOBBY – lista graczy
-          if (data.status === "lobby") {
-            let html = "";
-            for (let id in data.players) {
-              html += `<div class="player"><span>${data.players[id].nick}</span></div>`;
-            }
-            document.getElementById("playerList").innerHTML = html;
-          }
-
-          // START → wybór persony
-          if (data.status === "persona" && !document.getElementById("s-persona").classList.contains("hidden") === false) {
-            // już jesteśmy na ekranie persony
-          }
-          if (data.status === "persona") {
-            show("s-persona");
-          }
-
-          // Czekanie na persony
-          if (data.status === "persona") {
-            let allReady = true;
-            let html = "";
-            for (let id in data.players) {
-              const p = data.players[id];
-              html += `<div class="player"><span>${p.nick}</span><span>${p.persona ? "✅" : "…"}</span></div>`;
-              if (!p.persona) allReady = false;
-            }
-            if (document.getElementById("s-wait").classList.contains("hidden") === false) {
-              document.getElementById("readyList").innerHTML = html;
-            }
-
-            // Host startuje pierwszą turę gdy wszyscy gotowi
-            if (allReady && isHost && !data.currentHinter) {
-              const order = data.order || Object.keys(data.players);
-              const first = order[Math.floor(Math.random() * order.length)];
-              fetch(`${DB}/rooms/${room}.json`, {
-                method: "PATCH",
-                body: JSON.stringify({
-                  status: "turn",
-                  currentHinter: first,
-                  round: 1,
-                  hints: [],
-                  guessed: false
-                })
-              });
-            }
-          }
-
-          // TURA
-          if (data.status === "turn") {
-            const amHinter = data.currentHinter === myId;
-            currentRound = data.round || 1;
-
-            if (amHinter) {
-              show("s-hinter");
-              document.getElementById("roundNumH").innerText = currentRound;
-            } else {
-              show("s-guesser");
-              document.getElementById("roundNumG").innerText = currentRound;
-              document.getElementById("pointsVal").innerText = POINTS[currentRound - 1] || 10;
-
-              // pokaż wskazówki
-              let h = "";
-              (data.hints || []).forEach(w => {
-                h += `<div class="hint-box">${w}</div>`;
-              });
-              document.getElementById("hintsList").innerHTML = h || "<p style='color:#666'>Czekamy na wskazówkę…</p>";
-            }
-          }
-
-          // Koniec tury
-          if (data.status === "result") {
-            show("s-result");
-            document.getElementById("resultTitle").innerText = data.guessed ? "Odgadnięto!" : "Koniec rund";
-            document.getElementById("resultText").innerText = data.resultMsg || "";
-          }
-        });
-    }
-
-    // ===== HOST STARTUJE =====
-    function startGame() {
-      if (!isHost) return;
-      fetch(`${DB}/rooms/${room}/status.json`, {
-        method: "PUT",
-        body: JSON.stringify("persona")
+      }).then(() => {
+        document.getElementById("roomCode").innerText = room;
+        show("s-lobby");
+        startPoll();
       });
     }
 
-    // ===== WYSYŁANIE PERSONY =====
+    function startPoll() {
+      if (poll) clearInterval(poll);
+      poll = setInterval(sync, 1000);
+    }
+
+    function sync() {
+      fetch(`${DB}/rooms/${room}.json`).then(r => r.json()).then(data => {
+        if (!data) return;
+
+        // LOBBY
+        if (data.status === "lobby") {
+          let html = "";
+          for (let id in data.players) {
+            html += `<div class="player">${data.players[id].nick}</div>`;
+          }
+          document.getElementById("playerList").innerHTML = html;
+        }
+
+        // PERSONA
+        if (data.status === "persona") {
+          show("s-persona");
+        }
+
+        // CZEKANIE NA PERSONY
+        if (data.status === "persona") {
+          let all = true, html = "";
+          for (let id in data.players) {
+            const p = data.players[id];
+            html += `<div class="player"><span>${p.nick}</span><span>${p.persona ? "✅" : "…"}</span></div>`;
+            if (!p.persona) all = false;
+          }
+          document.getElementById("readyList").innerHTML = html;
+
+          if (all && isHost && !data.current) {
+            const order = data.order || Object.keys(data.players);
+            const first = order[Math.floor(Math.random() * order.length)];
+            fetch(`${DB}/rooms/${room}.json`, {
+              method: "PATCH",
+              body: JSON.stringify({ status: "turn", current: first, round: 1, hints: [] })
+            });
+          }
+        }
+
+        // TURA
+        if (data.status === "turn") {
+          const amI = data.current === myId;
+          const rnd = data.round || 1;
+
+          if (amI) {
+            show("s-hinter");
+            document.getElementById("roundH").innerText = rnd;
+          } else {
+            show("s-guesser");
+            document.getElementById("roundG").innerText = rnd;
+            document.getElementById("pts").innerText = POINTS[rnd-1] || 10;
+            let h = "";
+            (data.hints || []).forEach(w => h += `<div class="hint-box">${w}</div>`);
+            document.getElementById("hintsList").innerHTML = h || "<p style='color:#555'>Czekam na wskazówkę...</p>";
+          }
+        }
+
+        // WYNIK
+        if (data.status === "result") {
+          show("s-result");
+          document.getElementById("resTitle").innerText = data.won ? "Odgadnięto!" : "Koniec tury";
+          document.getElementById("resText").innerText = data.msg || "";
+          if (isHost) {
+            document.getElementById("btnNext").classList.remove("hidden");
+            document.getElementById("waitNext").classList.add("hidden");
+          } else {
+            document.getElementById("btnNext").classList.add("hidden");
+            document.getElementById("waitNext").classList.remove("hidden");
+          }
+        }
+      });
+    }
+
+    function startGame() {
+      if (!isHost) return;
+      fetch(`${DB}/rooms/${room}/status.json`, { method: "PUT", body: JSON.stringify("persona") });
+    }
+
     function submitPersona() {
-      const val = document.getElementById("personaInput").value.trim();
-      if (!val) return alert("Wpisz personę");
+      const v = document.getElementById("personaInput").value.trim();
+      if (!v) return alert("Wpisz personę");
       fetch(`${DB}/rooms/${room}/players/${myId}/persona.json`, {
-        method: "PUT",
-        body: JSON.stringify(val)
+        method: "PUT", body: JSON.stringify(v)
       }).then(() => show("s-wait"));
     }
 
-    // ===== WSKAZÓWKA =====
     function sendHint() {
       const word = document.getElementById("hintInput").value.trim();
       if (!word) return;
 
-      fetch(`${DB}/rooms/${room}.json`)
-        .then(r => r.json())
-        .then(data => {
-          const hints = data.hints || [];
-          hints.push(word);
-          const nextRound = (data.round || 1) + 1;
+      fetch(`${DB}/rooms/${room}.json`).then(r => r.json()).then(data => {
+        const hints = data.hints || [];
+        hints.push(word);
+        const next = (data.round || 1) + 1;
 
-          // jeśli to była 5. wskazówka → koniec tury
-          if (hints.length >= 5) {
-            return fetch(`${DB}/rooms/${room}.json`, {
-              method: "PATCH",
-              body: JSON.stringify({
-                status: "result",
-                hints,
-                guessed: false,
-                resultMsg: "Nikt nie odgadł w 5 rundach"
-              })
-            });
-          }
-
-          return fetch(`${DB}/rooms/${room}.json`, {
-            method: "PATCH",
-            body: JSON.stringify({
-              hints,
-              round: nextRound
-            })
-          });
-        })
-        .then(() => {
-          document.getElementById("hintInput").value = "";
-        });
-    }
-
-    // ===== ZGADYWANIE =====
-    function sendGuess() {
-      const guess = document.getElementById("guessInput").value.trim().toLowerCase();
-      if (!guess) return;
-
-      fetch(`${DB}/rooms/${room}.json`)
-        .then(r => r.json())
-        .then(data => {
-          const hinterId = data.currentHinter;
-          const correct = (data.players[hinterId].persona || "").toLowerCase();
-
-          if (guess === correct) {
-            // TRAFIONE
-            const pts = POINTS[(data.round || 1) - 1] || 10;
-            return fetch(`${DB}/rooms/${room}.json`, {
-              method: "PATCH",
-              body: JSON.stringify({
-                status: "result",
-                guessed: true,
-                resultMsg: `${myNick} odgadł! +${pts} pkt`
-              })
-            });
-          } else {
-            document.getElementById("guessStatus").innerText = "Nie tym razem…";
-            document.getElementById("guessInput").value = "";
-          }
-        });
-    }
-
-    // ===== NASTĘPNA OSOBA =====
-    function nextTurn() {
-      if (!isHost) return;
-
-      fetch(`${DB}/rooms/${room}.json`)
-        .then(r => r.json())
-        .then(data => {
-          const order = data.order || Object.keys(data.players);
-          const currentIdx = order.indexOf(data.currentHinter);
-          const nextIdx = (currentIdx + 1) % order.length;
-          const nextHinter = order[nextIdx];
-
-          // jeśli wróciliśmy do początku → koniec gry (na razie restart)
+        if (hints.length >= 5) {
+          // koniec 5 rund
           fetch(`${DB}/rooms/${room}.json`, {
             method: "PATCH",
             body: JSON.stringify({
-              status: "turn",
-              currentHinter: nextHinter,
-              round: 1,
-              hints: [],
-              guessed: false
+              status: "result",
+              won: false,
+              msg: "Nikt nie odgadł po 5 wskazówkach",
+              hints
             })
           });
+        } else {
+          fetch(`${DB}/rooms/${room}.json`, {
+            method: "PATCH",
+            body: JSON.stringify({ hints, round: next })
+          });
+        }
+        document.getElementById("hintInput").value = "";
+      });
+    }
+
+    function sendGuess() {
+      const g = document.getElementById("guessInput").value.trim().toLowerCase();
+      if (!g) return;
+
+      fetch(`${DB}/rooms/${room}.json`).then(r => r.json()).then(data => {
+        const correct = (data.players[data.current]?.persona || "").toLowerCase();
+        if (g === correct) {
+          // TRAFIONE – wszyscy przechodzą do wyniku
+          fetch(`${DB}/rooms/${room}.json`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              status: "result",
+              won: true,
+              msg: myNick + " odgadł poprawnie!"
+            })
+          });
+        } else {
+          document.getElementById("guessMsg").innerText = "Źle, próbuj dalej";
+          document.getElementById("guessInput").value = "";
+        }
+      });
+    }
+
+    function nextPlayer() {
+      if (!isHost) return;
+      fetch(`${DB}/rooms/${room}.json`).then(r => r.json()).then(data => {
+        const order = data.order || Object.keys(data.players);
+        let idx = order.indexOf(data.current);
+        idx = (idx + 1) % order.length;
+        const next = order[idx];
+
+        fetch(`${DB}/rooms/${room}.json`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            status: "turn",
+            current: next,
+            round: 1,
+            hints: [],
+            won: false,
+            msg: ""
+          })
         });
+      });
     }
   </script>
 </body>
