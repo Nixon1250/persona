@@ -21,56 +21,52 @@
         <p id="wynik" style="color: #eccc68;">Inicjalizacja systemu...</p>
     </div>
 
-    <!-- Najbardziej niezawodny serwer dystrybucyjny Google - brak możliwości blokady CORS na GitHubie -->
-    <script src="https://gstatic.com"></script>
-    <script src="https://gstatic.com"></script>
-
     <script>
+        // Całkowicie niezależny mechanizm wysyłania danych przez wbudowane API sieciowe Google (REST)
+        // Eliminuje potrzebę wczytywania zewnętrznych plików skryptów .js
         window.onload = function() {
             const wynikElement = document.getElementById("wynik");
-            wynikElement.innerText = "Oczekiwanie na ruch...";
+            wynikElement.innerText = "Oczekiwanie na ruch... (System wbudowany)";
 
-            const firebaseConfig = {
-                apiKey: "AIzaSyAnwBG2UCc9Bx8xbnfStR17hku_f-6e06Q",
-                authDomain: "://firebaseapp.com",
-                databaseURL: "https://firebasedatabase.app",
-                projectId: "guess-27805",
-                storageBucket: "guess-27805.firebasestorage.app",
-                messagingSenderId: "743213180905",
-                appId: "1:743213180905:web:fb741f2efae9cf04c38d78"
-            };
-            
-            if (typeof firebase !== 'undefined') {
-                firebase.initializeApp(firebaseConfig);
-                const database = firebase.database();
+            // Adres Twojej konkretnej bazy danych Realtime Database w Belgii
+            const databaseURL = "https://firebasedatabase.app";
 
-                document.getElementById('btn').addEventListener('click', () => {
-                    const tekst = document.getElementById("word").value.trim();
+            document.getElementById('btn').addEventListener('click', () => {
+                const tekst = document.getElementById("word").value.trim();
 
-                    if (tekst === "") {
-                        wynikElement.innerText = "⚠️ Pole nie może być puste!";
-                        wynikElement.style.color = "#ff4757";
-                        return;
-                    }
+                if (tekst === "") {
+                    wynikElement.innerText = "⚠️ Pole nie może być puste!";
+                    wynikElement.style.color = "#ff4757";
+                    return;
+                }
 
-                    wynikElement.innerText = "⏳ Wysyłam do chmury Google...";
-                    wynikElement.style.color = "#eccc68";
+                wynikElement.innerText = "⏳ Wysyłam bezpośrednio do chmury Google...";
+                wynikElement.style.color = "#eccc68";
 
-                    database.ref('gra/aktualna_persona').set(tekst)
-                    .then(() => {
+                // Wysyłamy proste żądanie sieciowe metodą PATCH (czysta komunikacja z serwerem)
+                fetch(databaseURL, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        aktualna_persona: tekst
+                    })
+                })
+                .then(response => {
+                    if (response.ok) {
                         wynikElement.innerText = "✅ Sukces! Słowo '" + tekst + "' jest w bazie!";
                         wynikElement.style.color = "#2ed573";
-                    })
-                    .catch((error) => {
-                        wynikElement.innerText = "❌ Błąd bazy: " + error.message;
-                        wynikElement.style.color = "#ff4757";
-                        console.error(error);
-                    });
+                    } else {
+                        throw new Error("Serwer zwrócił błąd: " + response.status);
+                    }
+                })
+                .catch((error) => {
+                    wynikElement.innerText = "❌ Błąd sieciowy: " + error.message;
+                    wynikElement.style.color = "#ff4757";
+                    console.error(error);
                 });
-            } else {
-                wynikElement.innerText = "❌ Krytyczny błąd: Nie wczytano Firebase. Odśwież stronę.";
-                wynikElement.style.color = "#ff4757";
-            }
+            });
         };
     </script>
 
