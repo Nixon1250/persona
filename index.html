@@ -2,314 +2,439 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Persona</title>
   <style>
-    * { box-sizing: border-box; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #0f0f0f;
-      color: white;
-      margin: 0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0b0b0b;
+      color: #fff;
+      min-height: 100vh;
       padding: 16px;
       text-align: center;
-      min-height: 100vh;
     }
     .box {
-      background: #1a1a1a;
-      border-radius: 16px;
-      padding: 24px;
-      max-width: 420px;
+      background: #161616;
+      border-radius: 18px;
+      padding: 24px 20px;
+      max-width: 400px;
       margin: 20px auto;
-      border: 1px solid #333;
+      border: 1px solid #2a2a2a;
     }
-    h1 { color: #2ed573; margin: 0 0 8px 0; font-size: 28px; }
-    h2 { color: #eccc68; margin: 0 0 16px 0; font-size: 20px; }
-    p { color: #aaa; margin: 8px 0; }
-    input, button, textarea {
+    h1 { color: #2ed573; font-size: 26px; margin-bottom: 6px; }
+    h2 { color: #f1c40f; font-size: 20px; margin-bottom: 14px; }
+    p { color: #999; font-size: 14px; margin: 8px 0; }
+    input, button {
       width: 100%;
       padding: 14px;
       margin: 8px 0;
-      border-radius: 10px;
+      border-radius: 12px;
       border: none;
       font-size: 16px;
     }
-    input, textarea {
-      background: #121212;
+    input {
+      background: #0f0f0f;
       color: white;
-      border: 1px solid #444;
+      border: 1px solid #333;
       text-align: center;
     }
     button {
       background: #2ed573;
       color: #000;
-      font-weight: bold;
+      font-weight: 700;
       cursor: pointer;
     }
-    button:disabled { background: #444; color: #888; }
-    button.red { background: #ff4757; color: white; }
+    button:active { transform: scale(0.97); }
+    button.secondary { background: #333; color: #fff; }
     .code {
-      font-size: 40px;
-      font-weight: bold;
-      letter-spacing: 6px;
-      color: #eccc68;
-      margin: 16px 0;
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: 8px;
+      color: #f1c40f;
+      margin: 18px 0;
     }
     .player {
-      background: #252525;
-      padding: 10px 14px;
-      border-radius: 8px;
+      background: #222;
+      padding: 12px 16px;
+      border-radius: 10px;
       margin: 6px 0;
-      text-align: left;
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      font-size: 15px;
     }
     .timer {
-      font-size: 56px;
-      font-weight: bold;
+      font-size: 64px;
+      font-weight: 800;
       color: #ff4757;
-      margin: 16px 0;
+      margin: 12px 0;
+      font-variant-numeric: tabular-nums;
     }
-    .hint {
-      background: #2f3542;
-      padding: 12px;
-      border-radius: 10px;
-      font-size: 20px;
-      color: #eccc68;
+    .hint-box {
+      background: #1e2a3a;
+      border: 1px solid #2a3f55;
+      border-radius: 12px;
+      padding: 14px;
       margin: 10px 0;
+      font-size: 20px;
+      color: #f1c40f;
+      font-weight: 600;
+    }
+    .points {
+      font-size: 15px;
+      color: #2ed573;
+      margin-bottom: 8px;
     }
     .hidden { display: none !important; }
-    #status { color: #888; font-size: 14px; margin-top: 12px; }
+    #status { color: #777; font-size: 13px; margin-top: 12px; }
   </style>
 </head>
 <body>
 
-  <!-- EKRAN STARTOWY -->
-  <div class="box" id="ekranStart">
+  <!-- START -->
+  <div class="box" id="s-start">
     <h1>Persona</h1>
-    <p>Zgadnij kto to – gra imprezowa</p>
-    <button onclick="stworzPokoj()">Stwórz pokój (Host)</button>
-    <p style="margin:16px 0">lub</p>
-    <input type="text" id="kodWejsciowy" placeholder="Kod pokoju" maxlength="5">
-    <input type="text" id="nick" placeholder="Twój nick">
-    <button onclick="dolaczDoPokoju()">Dołącz</button>
+    <p>Gra imprezowa – zgadnij kto to</p>
+    <button onclick="hostCreate()">Stwórz pokój</button>
+    <p style="margin:14px 0">lub dołącz</p>
+    <input id="joinCode" placeholder="Kod pokoju" maxlength="5">
+    <input id="joinNick" placeholder="Twój nick">
+    <button onclick="playerJoin()">Dołącz</button>
     <div id="status"></div>
   </div>
 
   <!-- LOBBY -->
-  <div class="box hidden" id="ekranLobby">
+  <div class="box hidden" id="s-lobby">
     <h1>Pokój</h1>
-    <div class="code" id="kodPokoju">----</div>
-    <p>Podaj kod znajomym</p>
-    <div id="listaGraczy"></div>
-    <button id="btnStart" class="hidden" onclick="rozpocznijGre()">Rozpocznij grę</button>
-    <div id="statusLobby"></div>
+    <div class="code" id="roomCode">-----</div>
+    <p>Kod dla znajomych</p>
+    <div id="playerList"></div>
+    <button id="btnStart" class="hidden" onclick="startGame()">Rozpocznij grę</button>
   </div>
 
   <!-- WYBÓR PERSONY -->
-  <div class="box hidden" id="ekranPersona">
+  <div class="box hidden" id="s-persona">
     <h2>Wybierz personę</h2>
-    <p>Wpisz potajemnie kogoś (znaną osobę lub znajomego)</p>
-    <input type="text" id="inputPersona" placeholder="Np. Robert Lewandowski">
-    <button onclick="wyslijPersone()">Gotowe</button>
-    <div id="statusPersona"></div>
+    <p>Wpisz potajemnie (znana osoba lub znajomy)</p>
+    <input id="personaInput" placeholder="Np. Robert Lewandowski">
+    <button onclick="submitPersona()">Gotowe</button>
   </div>
 
-  <!-- OCZEKIWANIE NA WSZYSTKICH -->
-  <div class="box hidden" id="ekranCzekaj">
-    <h2>Czekamy na wszystkich...</h2>
-    <div id="listaGotowych"></div>
+  <!-- CZEKANIE -->
+  <div class="box hidden" id="s-wait">
+    <h2>Czekamy na wszystkich</h2>
+    <div id="readyList"></div>
   </div>
 
-  <!-- RUNDA – PODPOWIADAJĄCY -->
-  <div class="box hidden" id="ekranPodpowiadajacy">
-    <h2>Twoja tura – dawaj wskazówkę!</h2>
-    <p>Runda <span id="nrRundy1">1</span> / 5</p>
-    <div class="timer" id="timerPodpowiedz">30</div>
-    <input type="text" id="inputWskazowka" placeholder="Jedno słowo">
-    <button onclick="wyslijWskazowke()">Wyślij wskazówkę</button>
+  <!-- PODPOWIADAJĄCY -->
+  <div class="box hidden" id="s-hinter">
+    <h2>Twoja tura!</h2>
+    <p>Runda <span id="roundNumH">1</span>/5</p>
+    <div class="timer" id="timerH">25</div>
+    <input id="hintInput" placeholder="Jedno słowo wskazówki">
+    <button onclick="sendHint()">Wyślij wskazówkę</button>
   </div>
 
-  <!-- RUNDA – ZGADUJĄCY -->
-  <div class="box hidden" id="ekranZgadujacy">
+  <!-- ZGADUJĄCY -->
+  <div class="box hidden" id="s-guesser">
     <h2>Zgaduj!</h2>
-    <p>Runda <span id="nrRundy2">1</span> / 5 • Punkty: <span id="punktyRundy">50</span></p>
-    <div class="timer" id="timerZgadywanie">30</div>
-    <div id="listaWskazowek"></div>
-    <input type="text" id="inputOdpowiedz" placeholder="Kto to jest?">
-    <button onclick="wyslijOdpowiedz()">Wyślij odpowiedź</button>
-    <div id="statusOdpowiedzi"></div>
+    <div class="points">Punkty za tę rundę: <span id="pointsVal">50</span></div>
+    <p>Runda <span id="roundNumG">1</span>/5</p>
+    <div class="timer" id="timerG">25</div>
+    <div id="hintsList"></div>
+    <input id="guessInput" placeholder="Kto to jest?">
+    <button onclick="sendGuess()">Wyślij odpowiedź</button>
+    <div id="guessStatus"></div>
+  </div>
+
+  <!-- WYNIK TURY -->
+  <div class="box hidden" id="s-result">
+    <h2 id="resultTitle">Koniec tury</h2>
+    <p id="resultText"></p>
+    <button onclick="nextTurn()">Następna osoba</button>
   </div>
 
   <script>
     const DB = "https://guess-27805-default-rtdb.europe-west1.firebasedatabase.app";
-    let kod = "";
-    let jestemHostem = false;
-    let mojId = "g_" + Math.random().toString(36).substr(2, 8);
-    let mojNick = "";
-    let interwal = null;
+    let room = "";
+    let myId = "p" + Math.random().toString(36).slice(2, 9);
+    let myNick = "";
+    let isHost = false;
+    let poll = null;
+    let timerInterval = null;
+    let currentRound = 1;
+    const POINTS = [50, 40, 30, 20, 10];
 
-    // ========== STARTOWE ==========
-    function stworzPokoj() {
-      kod = Math.random().toString(36).substr(2, 5).toUpperCase();
-      jestemHostem = true;
-      mojNick = "Host";
+    function show(id) {
+      ["s-start","s-lobby","s-persona","s-wait","s-hinter","s-guesser","s-result"]
+        .forEach(s => document.getElementById(s).classList.add("hidden"));
+      document.getElementById(id).classList.remove("hidden");
+    }
 
-      fetch(`${DB}/pokoje/${kod}.json`, {
+    // ===== HOST TWORZY POKÓJ =====
+    function hostCreate() {
+      room = Math.random().toString(36).slice(2, 7).toUpperCase();
+      isHost = true;
+      myNick = "Host";
+
+      const data = {
+        status: "lobby",
+        host: myId,
+        players: {
+          [myId]: { nick: "Host", persona: null, score: 0 }
+        },
+        order: [myId],
+        currentHinter: null,
+        round: 1,
+        hints: [],
+        guessed: false
+      };
+
+      fetch(`${DB}/rooms/${room}.json`, {
         method: "PUT",
-        body: JSON.stringify({
-          host: mojId,
-          status: "lobby",
-          gracze: { [mojId]: { nick: "Host", gotowy: false, persona: "" } }
-        })
+        body: JSON.stringify(data)
       }).then(() => {
-        pokaz("ekranLobby");
-        document.getElementById("kodPokoju").innerText = kod;
+        document.getElementById("roomCode").innerText = room;
         document.getElementById("btnStart").classList.remove("hidden");
-        nasluchuj();
+        show("s-lobby");
+        startPolling();
       });
     }
 
-    function dolaczDoPokoju() {
-      kod = document.getElementById("kodWejsciowy").value.trim().toUpperCase();
-      mojNick = document.getElementById("nick").value.trim() || "Gracz";
-      if (kod.length < 4) return alert("Za krótki kod");
+    // ===== GRACZ DOŁĄCZA =====
+    function playerJoin() {
+      room = document.getElementById("joinCode").value.trim().toUpperCase();
+      myNick = document.getElementById("joinNick").value.trim() || "Gracz";
+      if (room.length < 4) return alert("Wpisz kod");
 
-      fetch(`${DB}/pokoje/${kod}.json`)
+      fetch(`${DB}/rooms/${room}.json`)
         .then(r => r.json())
         .then(data => {
-          if (!data) return alert("Nie ma takiego pokoju");
-          return fetch(`${DB}/pokoje/${kod}/gracze/${mojId}.json`, {
+          if (!data || data.status !== "lobby") {
+            alert("Pokój nie istnieje lub gra już wystartowała");
+            return;
+          }
+          return fetch(`${DB}/rooms/${room}/players/${myId}.json`, {
             method: "PUT",
-            body: JSON.stringify({ nick: mojNick, gotowy: false, persona: "" })
+            body: JSON.stringify({ nick: myNick, persona: null, score: 0 })
+          }).then(() => {
+            // dodaj do kolejki
+            const order = data.order || [];
+            order.push(myId);
+            return fetch(`${DB}/rooms/${room}/order.json`, {
+              method: "PUT",
+              body: JSON.stringify(order)
+            });
           });
         })
         .then(() => {
-          pokaz("ekranLobby");
-          document.getElementById("kodPokoju").innerText = kod;
-          nasluchuj();
+          document.getElementById("roomCode").innerText = room;
+          show("s-lobby");
+          startPolling();
         });
     }
 
-    function nasluchuj() {
-      if (interwal) clearInterval(interwal);
-      interwal = setInterval(() => {
-        fetch(`${DB}/pokoje/${kod}.json`)
-          .then(r => r.json())
-          .then(data => {
-            if (!data) return;
-
-            // Lista graczy w lobby
-            if (data.status === "lobby") {
-              let html = "";
-              for (let id in data.gracze) {
-                html += `<div class="player">${data.gracze[id].nick}</div>`;
-              }
-              document.getElementById("listaGraczy").innerHTML = html;
-            }
-
-            // Start gry → wybór persony
-            if (data.status === "wybor" && document.getElementById("ekranLobby").style.display !== "none") {
-              pokaz("ekranPersona");
-            }
-
-            // Wszyscy wybrali persony
-            if (data.status === "wybor") {
-              let wszyscy = true;
-              let html = "";
-              for (let id in data.gracze) {
-                const g = data.gracze[id];
-                html += `<div class="player">${g.nick} ${g.persona ? "✅" : "⏳"}</div>`;
-                if (!g.persona) wszyscy = false;
-              }
-              if (document.getElementById("ekranCzekaj").classList.contains("hidden") === false) {
-                document.getElementById("listaGotowych").innerHTML = html;
-              }
-              if (wszyscy && jestemHostem) {
-                // Host automatycznie startuje rundę 1
-                fetch(`${DB}/pokoje/${kod}.json`, {
-                  method: "PATCH",
-                  body: JSON.stringify({
-                    status: "runda",
-                    runda: 1,
-                    wskazowki: [],
-                    aktualnyPodpowiadajacy: Object.keys(data.gracze)[0]
-                  })
-                });
-              }
-            }
-
-            // Runda trwa
-            if (data.status === "runda") {
-              const jestemPodpowiadajacym = data.aktualnyPodpowiadajacy === mojId;
-              if (jestemPodpowiadajacym) {
-                pokaz("ekranPodpowiadajacy");
-                document.getElementById("nrRundy1").innerText = data.runda || 1;
-              } else {
-                pokaz("ekranZgadujacy");
-                document.getElementById("nrRundy2").innerText = data.runda || 1;
-                // Pokaż wskazówki
-                let h = "";
-                (data.wskazowki || []).forEach(w => {
-                  h += `<div class="hint">${w}</div>`;
-                });
-                document.getElementById("listaWskazowek").innerHTML = h;
-              }
-            }
-          });
-      }, 1500);
+    // ===== POLLING =====
+    function startPolling() {
+      if (poll) clearInterval(poll);
+      poll = setInterval(sync, 1200);
     }
 
-    function rozpocznijGre() {
-      if (!jestemHostem) return;
-      fetch(`${DB}/pokoje/${kod}/status.json`, {
-        method: "PUT",
-        body: JSON.stringify("wybor")
-      });
-    }
-
-    function wyslijPersone() {
-      const persona = document.getElementById("inputPersona").value.trim();
-      if (!persona) return alert("Wpisz personę");
-      fetch(`${DB}/pokoje/${kod}/gracze/${mojId}/persona.json`, {
-        method: "PUT",
-        body: JSON.stringify(persona)
-      }).then(() => {
-        pokaz("ekranCzekaj");
-      });
-    }
-
-    function wyslijWskazowke() {
-      const slowo = document.getElementById("inputWskazowka").value.trim();
-      if (!slowo) return;
-      // Dodaj wskazówkę do tablicy
-      fetch(`${DB}/pokoje/${kod}/wskazowki.json`)
+    function sync() {
+      fetch(`${DB}/rooms/${room}.json`)
         .then(r => r.json())
-        .then(arr => {
-          arr = arr || [];
-          arr.push(slowo);
-          return fetch(`${DB}/pokoje/${kod}/wskazowki.json`, {
-            method: "PUT",
-            body: JSON.stringify(arr)
-          });
-        })
-        .then(() => {
-          document.getElementById("inputWskazowka").value = "";
-          document.getElementById("inputWskazowka").disabled = true;
+        .then(data => {
+          if (!data) return;
+
+          // LOBBY – lista graczy
+          if (data.status === "lobby") {
+            let html = "";
+            for (let id in data.players) {
+              html += `<div class="player"><span>${data.players[id].nick}</span></div>`;
+            }
+            document.getElementById("playerList").innerHTML = html;
+          }
+
+          // START → wybór persony
+          if (data.status === "persona" && !document.getElementById("s-persona").classList.contains("hidden") === false) {
+            // już jesteśmy na ekranie persony
+          }
+          if (data.status === "persona") {
+            show("s-persona");
+          }
+
+          // Czekanie na persony
+          if (data.status === "persona") {
+            let allReady = true;
+            let html = "";
+            for (let id in data.players) {
+              const p = data.players[id];
+              html += `<div class="player"><span>${p.nick}</span><span>${p.persona ? "✅" : "…"}</span></div>`;
+              if (!p.persona) allReady = false;
+            }
+            if (document.getElementById("s-wait").classList.contains("hidden") === false) {
+              document.getElementById("readyList").innerHTML = html;
+            }
+
+            // Host startuje pierwszą turę gdy wszyscy gotowi
+            if (allReady && isHost && !data.currentHinter) {
+              const order = data.order || Object.keys(data.players);
+              const first = order[Math.floor(Math.random() * order.length)];
+              fetch(`${DB}/rooms/${room}.json`, {
+                method: "PATCH",
+                body: JSON.stringify({
+                  status: "turn",
+                  currentHinter: first,
+                  round: 1,
+                  hints: [],
+                  guessed: false
+                })
+              });
+            }
+          }
+
+          // TURA
+          if (data.status === "turn") {
+            const amHinter = data.currentHinter === myId;
+            currentRound = data.round || 1;
+
+            if (amHinter) {
+              show("s-hinter");
+              document.getElementById("roundNumH").innerText = currentRound;
+            } else {
+              show("s-guesser");
+              document.getElementById("roundNumG").innerText = currentRound;
+              document.getElementById("pointsVal").innerText = POINTS[currentRound - 1] || 10;
+
+              // pokaż wskazówki
+              let h = "";
+              (data.hints || []).forEach(w => {
+                h += `<div class="hint-box">${w}</div>`;
+              });
+              document.getElementById("hintsList").innerHTML = h || "<p style='color:#666'>Czekamy na wskazówkę…</p>";
+            }
+          }
+
+          // Koniec tury
+          if (data.status === "result") {
+            show("s-result");
+            document.getElementById("resultTitle").innerText = data.guessed ? "Odgadnięto!" : "Koniec rund";
+            document.getElementById("resultText").innerText = data.resultMsg || "";
+          }
         });
     }
 
-    function wyslijOdpowiedz() {
-      const odp = document.getElementById("inputOdpowiedz").value.trim();
-      if (!odp) return;
-      document.getElementById("statusOdpowiedzi").innerText = "Wysłano: " + odp;
-      // Tu później dodamy sprawdzanie poprawności i punkty
+    // ===== HOST STARTUJE =====
+    function startGame() {
+      if (!isHost) return;
+      fetch(`${DB}/rooms/${room}/status.json`, {
+        method: "PUT",
+        body: JSON.stringify("persona")
+      });
     }
 
-    function pokaz(id) {
-      ["ekranStart","ekranLobby","ekranPersona","ekranCzekaj","ekranPodpowiadajacy","ekranZgadujacy"]
-        .forEach(e => document.getElementById(e).classList.add("hidden"));
-      document.getElementById(id).classList.remove("hidden");
+    // ===== WYSYŁANIE PERSONY =====
+    function submitPersona() {
+      const val = document.getElementById("personaInput").value.trim();
+      if (!val) return alert("Wpisz personę");
+      fetch(`${DB}/rooms/${room}/players/${myId}/persona.json`, {
+        method: "PUT",
+        body: JSON.stringify(val)
+      }).then(() => show("s-wait"));
+    }
+
+    // ===== WSKAZÓWKA =====
+    function sendHint() {
+      const word = document.getElementById("hintInput").value.trim();
+      if (!word) return;
+
+      fetch(`${DB}/rooms/${room}.json`)
+        .then(r => r.json())
+        .then(data => {
+          const hints = data.hints || [];
+          hints.push(word);
+          const nextRound = (data.round || 1) + 1;
+
+          // jeśli to była 5. wskazówka → koniec tury
+          if (hints.length >= 5) {
+            return fetch(`${DB}/rooms/${room}.json`, {
+              method: "PATCH",
+              body: JSON.stringify({
+                status: "result",
+                hints,
+                guessed: false,
+                resultMsg: "Nikt nie odgadł w 5 rundach"
+              })
+            });
+          }
+
+          return fetch(`${DB}/rooms/${room}.json`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              hints,
+              round: nextRound
+            })
+          });
+        })
+        .then(() => {
+          document.getElementById("hintInput").value = "";
+        });
+    }
+
+    // ===== ZGADYWANIE =====
+    function sendGuess() {
+      const guess = document.getElementById("guessInput").value.trim().toLowerCase();
+      if (!guess) return;
+
+      fetch(`${DB}/rooms/${room}.json`)
+        .then(r => r.json())
+        .then(data => {
+          const hinterId = data.currentHinter;
+          const correct = (data.players[hinterId].persona || "").toLowerCase();
+
+          if (guess === correct) {
+            // TRAFIONE
+            const pts = POINTS[(data.round || 1) - 1] || 10;
+            return fetch(`${DB}/rooms/${room}.json`, {
+              method: "PATCH",
+              body: JSON.stringify({
+                status: "result",
+                guessed: true,
+                resultMsg: `${myNick} odgadł! +${pts} pkt`
+              })
+            });
+          } else {
+            document.getElementById("guessStatus").innerText = "Nie tym razem…";
+            document.getElementById("guessInput").value = "";
+          }
+        });
+    }
+
+    // ===== NASTĘPNA OSOBA =====
+    function nextTurn() {
+      if (!isHost) return;
+
+      fetch(`${DB}/rooms/${room}.json`)
+        .then(r => r.json())
+        .then(data => {
+          const order = data.order || Object.keys(data.players);
+          const currentIdx = order.indexOf(data.currentHinter);
+          const nextIdx = (currentIdx + 1) % order.length;
+          const nextHinter = order[nextIdx];
+
+          // jeśli wróciliśmy do początku → koniec gry (na razie restart)
+          fetch(`${DB}/rooms/${room}.json`, {
+            method: "PATCH",
+            body: JSON.stringify({
+              status: "turn",
+              currentHinter: nextHinter,
+              round: 1,
+              hints: [],
+              guessed: false
+            })
+          });
+        });
     }
   </script>
 </body>
